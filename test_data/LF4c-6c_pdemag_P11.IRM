@@ -1,0 +1,2 @@
+sample	site	type	run	meas. time	x	y	z	M	Dc	Ic	Dg	Ig	Ds	Is	a95	sM	npos	Dspin	Ispin	 holder/sample	cup/sample	bl diff/sample	steps/rev	par1	par2	par3	par4	par5	par6	strat_level	geoaz	hade	dipdir	dip
+6c	LF4C	NRM(#|#|#|#|#|#)	2345	2014-03-25 10:34:40.500000	3.3150e-07	1.3105e-07	-9.1200e-07	9.7919e-07	21.6	-68.7	21.6	-68.7	21.6	-68.7	0.5	2.474e-09	3	82.0	37.5	0.002	0.000	0.000	36440	None	None	None	None	None	None	0.0	0.0	0.0	0.0	0.0
