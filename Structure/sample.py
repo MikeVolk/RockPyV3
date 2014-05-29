@@ -3,13 +3,13 @@ __author__ = 'Mike'
 import logging
 import numpy as np
 import scipy as sp
-from Functions import General, Convert
-import Measurements
-from Plots import General as RPplt
+from Functions import general, convert
+import measurements
+from Plots import general as RPplt
 
 
 class Sample():
-    General.create_logger('RockPy.SAMPLE')
+    general.create_logger('RockPy.SAMPLE')
 
     def __init__(self, name, mass=1, mass_unit=None, height=None, diameter=None, length_unit=None):
         self.name = name
@@ -19,10 +19,10 @@ class Sample():
         self.measurements = []
 
         if mass_unit:
-            mass_factor = Convert.convert2(mass_unit, 'kg', 'mass')
+            mass_factor = convert.convert2(mass_unit, 'kg', 'mass')
         else:
             self.log.info(' MISSING\t length_unit: assuming << mm >>')
-            mass_factor = Convert.convert2('mg', 'kg', 'mass')
+            mass_factor = convert.convert2('mg', 'kg', 'mass')
 
         if mass:
             self.mass_kg = mass * mass_factor
@@ -33,10 +33,10 @@ class Sample():
 
         # get length _unit for conversion
         if length_unit:
-            length_factor = Convert.convert2(length_unit, 'm', 'length')
+            length_factor = convert.convert2(length_unit, 'm', 'length')
         else:
             self.log.info(' MISSING\t mass_unit: assuming << mg >>')
-            length_factor = Convert.convert2('mm', 'm', 'length')
+            length_factor = convert.convert2('mm', 'm', 'length')
 
         if height:
             self.height_m = float(height) * length_factor
@@ -60,21 +60,21 @@ class Sample():
     ''' ADD FUNCTIONS '''
 
     def add_mass(self, mass, mass_unit='mg'):
-        self.mass_kg = float(mass) * Convert.convert2(mass_unit, 'kg', 'mass')
+        self.mass_kg = float(mass) * convert.convert2(mass_unit, 'kg', 'mass')
         self.log.debug(' ADDING\t << mass >> input: %.1f [%s] stored: %1f [kg]' % (mass, mass_unit, self.mass_kg))
 
     def add_height(self, height, length_unit='mm'):
-        self.height_m = float(height) * Convert.convert2(length_unit, 'm', 'length')
+        self.height_m = float(height) * convert.convert2(length_unit, 'm', 'length')
         self.log.debug(' ADDING\t << height >> input: %.1f [%s] stored: %1f [m]' % (height, length_unit, self.height_m))
 
     def add_diameter(self, diameter, length_unit='mm'):
-        self.diameter_m = float(diameter) * Convert.convert2(length_unit, 'm', 'length')
+        self.diameter_m = float(diameter) * convert.convert2(length_unit, 'm', 'length')
         self.log.debug(
             ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [m]' % (diameter, length_unit, self.diameter_m))
 
     def add_measurement(self, mtype, mfile, machine, mag_method=None):
-        implemented = {'af-demag': Measurements.Af_Demag,
-                       'hys':Measurements.Hysteresis}
+        implemented = {'af-demag': measurements.Af_Demag,
+                       'hys':measurements.Hysteresis}
         #todo hys
         #todo coe
         #todo irm
@@ -88,15 +88,15 @@ class Sample():
     ''' RETURN FUNCTIONS '''
 
     def mass(self, mass_unit='mg'):
-        OUT = self.mass_kg * Convert.convert2('kg', mass_unit, 'mass')
+        OUT = self.mass_kg * convert.convert2('kg', mass_unit, 'mass')
         return OUT
 
     def height(self, mass_unit='mm'):
-        OUT = self.height_m * Convert.convert2('m', mass_unit, 'length')
+        OUT = self.height_m * convert.convert2('m', mass_unit, 'length')
         return OUT
 
     def diamter(self, mass_unit='mm'):
-        OUT = self.diameter_m * Convert.convert2('m', mass_unit, 'length')
+        OUT = self.diameter_m * convert.convert2('m', mass_unit, 'length')
         return OUT
 
     ''' FIND FUNCTIONS '''

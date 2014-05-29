@@ -1,5 +1,5 @@
 __author__ = 'Mike'
-import Functions.General
-import Machines
+import Functions.general
+import machines
 
-Functions.General.create_logger('RockPy.READIN')
+Functions.general.create_logger('RockPy.READIN')

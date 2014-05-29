@@ -1,4 +1,4 @@
 __author__ = 'Mike'
-import General
+import general
 
-General.create_logger('RockPy.HELPER_FUNCTIONS')
+general.create_logger('RockPy.HELPER_FUNCTIONS')
