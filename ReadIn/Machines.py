@@ -1,13 +1,9 @@
-from RPv2 import readin
 import datetime
 import numpy as np
-import datetime
 import csv
-import datetime
 import helper
 from pprint import pprint
 import logging
-
 
 def sushibar(file, sample=None):
     log = logging.getLogger('RockPy.READIN')
@@ -87,13 +83,13 @@ def readMicroMagHeader(lines):
         if sectionstart:  # previous line was empty
             sectionstart = False
             if sl.isupper():  # we have a capitalized section header
-                verbous.INFO('reading header section %s' % sl)
+                # log.INFO('reading header section %s' % sl)
                 sectiontitle = sl
                 header[sectiontitle] = {}  # make new dictionary to gather data fields
                 sectioncount += 1
                 continue  # go to next line
             else:  # no captitalized section header after empty line -> we are probably at the end of the header
-                verbous.INFO('reading header finished at line %d' % lc)
+                # verbous.INFO('reading header finished at line %d' % lc)
                 break  # end of header
         if sectiontitle != None:  # we are within a section
             # split key value at fixed character position
@@ -108,6 +104,8 @@ def readMicroMagHeader(lines):
 
 
 def vsm(file):
+    log = logging.getLogger('RockPy.READIN')
+    log.info('IMPORTING\t VSM file: << %s >>' % (file))
     file = open(file, 'rU')
     reader_object = file.readlines()
     header = readMicroMagHeader(reader_object)  #get header
@@ -124,12 +122,13 @@ def vsm(file):
                     d = [float(i) for i in d]
                     aux.append(d)
                 except:
-                    verbous.INFO('%s' % d)
+                    log.info('%s' % d)
                     pass
         else:
             out_data.append(aux)
             aux = []
     segments = np.array(out_data[0])
     out_data = np.array(out_data[1:])
+    print segments
     return segments, out_data
 

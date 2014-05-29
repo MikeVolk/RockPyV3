@@ -72,8 +72,13 @@ class Sample():
         self.log.debug(
             ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [m]' % (diameter, length_unit, self.diameter_m))
 
-    def add_measurement(self, mtype, mfile, machine, mag_method):
-        implemented = {'af-demag': Measurements.Af_Demag}
+    def add_measurement(self, mtype, mfile, machine, mag_method=None):
+        implemented = {'af-demag': Measurements.Af_Demag,
+                       'hys':Measurements.Hysteresis}
+        #todo hys
+        #todo coe
+        #todo irm
+        #todo palint
         if mtype.lower() in implemented:
             measurement = implemented[mtype.lower()](self, mtype, mfile, machine, mag_method)
             if measurement.raw_data:
