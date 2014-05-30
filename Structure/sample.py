@@ -3,9 +3,9 @@ __author__ = 'Mike'
 import logging
 import numpy as np
 import scipy as sp
-from Functions import general, convert
+from ..Functions import general, convert
 import measurements
-from Plots import general as RPplt
+from ..Plots import general as RPplt
 
 
 class Sample():
@@ -80,6 +80,7 @@ class Sample():
         #todo irm
         #todo palint
         if mtype.lower() in implemented:
+            self.log.info(' ADDING\t << measurement >> %s' %mtype)
             measurement = implemented[mtype.lower()](self, mtype, mfile, machine, mag_method)
             if measurement.raw_data:
                 self.measurements.append(measurement)
