@@ -1,10 +1,11 @@
+# coding=utf-8
 __author__ = 'Mike'
 import logging
-from Functions import General
+from RockPyV3.Functions import general
 
 
 class Treatment(object):
-    General.create_logger('RockPy.TREATMENT')
+    general.create_logger('RockPy.TREATMENT')
 
     def __init__(self, sample, measurement, ttype, log=None):
         if not log:
@@ -27,3 +28,6 @@ class Pressure(Treatment):
     def get_label(self):
         label = 'P' + str(self.p_seen) + '|' + str(self.p_max)
         return label
+
+    def __repr__(self):
+        return 'P' + str(self.p_seen) + '|' + str(self.p_max)

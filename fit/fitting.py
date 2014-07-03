@@ -7,6 +7,26 @@ import scipy.special as sp
 import distributions
 from lmfit import Parameters, minimize, printfuncs
 import matplotlib.pyplot as plt
+class Fit(object):
+    def __init__(self, x_data, y_data, paramters = None):
+        self.x_data = x_data
+        self.y_data = y_data
+        
+        if not paramters:
+            self.parameters = Parameters()
+        else:
+            self.parameters = paramters
+
+
+    def check(self):
+        pass
+
+
+class HyperbolicBase(Fit):
+
+    def __init__(self, x_data, y_data, paramters = None):
+        super(HyperbolicBase, self).__init__(x_data, y_data, paramters = None)
+
 
 def normal_skewed(x, y, parameters=None, dfunc='pdf', check=False, *args, **kwargs):
     # verbous.INFO('FITTING SKEWED-GAUSSIAN')

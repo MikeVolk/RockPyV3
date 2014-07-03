@@ -3,10 +3,64 @@ __author__ = 'Mike'
 import logging
 import numpy as np
 import scipy as sp
-from ..Functions import general, convert
+from RockPyV3.Functions import general, convert
 import measurements
-from ..Plots import general as RPplt
+from RockPyV3.Plots import general as RPplt
+import matplotlib.pyplot as plt
 
+class SampleGroup():
+    def __init__(self):
+        self.samples = []
+        self.sample_names = []
+
+    def add_sample(self, sample):
+        self.samples.append(sample)
+        self.sample_names.append(sample.name)
+
+    def add_sample_list(self, sample_list):
+        for sample in sample_list:
+            self.add_sample(sample)
+
+
+    def pint_average_type(self, step='th'):
+        test = []
+        n_temps = []
+        for sample in self.samples:
+            for measurement in sample.measurements:
+                t_aux = getattr(measurement, step)[:, 0]
+                for i in getattr(measurement, step):
+                    norm = getattr(measurement, 'trm')
+                    aux = [sample.name, str(measurement.treatment), i[0], i[1] / norm[0, 1], i[2] / norm[0, 2],
+                           i[3] / norm[0, 3], i[4] / norm[0, 4]]
+                    test.append(aux)
+                n_temps.append(set(t_aux))
+
+        test = np.array(test)
+        temps = sorted(list(set.intersection(*n_temps)))
+        samples = sorted(list(set(test[:, 0])))
+        measurements = sorted(list(set(test[:, 1])))
+
+        ave, std = [], []
+        for measurement in measurements:
+            measurement_ave, measurement_std = [], []
+            for t in temps:
+                Taux = [float(i[2]) for i in test if float(i[2]) == t if i[1] == measurement]
+                Xaux = [float(i[3]) for i in test if float(i[2]) == t if i[1] == measurement]
+                Yaux = [float(i[4]) for i in test if float(i[2]) == t if i[1] == measurement]
+                Zaux = [float(i[5]) for i in test if float(i[2]) == t if i[1] == measurement]
+                Maux = [float(i[6]) for i in test if float(i[2]) == t if i[1] == measurement]
+                t_ave = np.array([np.mean(Taux), np.mean(Xaux), np.mean(Yaux), np.mean(Zaux), np.mean(Maux)])
+                t_std = np.array([np.std(Taux), np.std(Xaux), np.std(Yaux), np.std(Zaux), np.std(Maux)])
+                measurement_ave.append(t_ave)
+                measurement_std.append(t_std)
+            ave.append(measurement_ave)
+            std.append(measurement_std)
+        return np.array(ave), np.array(std)
+
+    def plot(self, mtype, norm='mass', value=None, rtn='show'):
+        if mtype == 'hys':
+            OUT = RPplt.Hys(samples=self.samples, norm=norm, value=value, rtn=rtn).show()
+            return OUT
 
 class Sample():
     general.create_logger('RockPy.SAMPLE')
@@ -41,7 +95,7 @@ class Sample():
         if height:
             self.height_m = float(height) * length_factor
             self.log.debug(
-                ' ADDING\t << height >> input: %.1f [%s] stored: %1f [kg]' % (height, length_unit, self.height_m))
+                ' ADDING\t << height >> input: %.1f [%s] stored: %1f [m]' % (height, length_unit, self.height_m))
 
         else:
             self.log.debug('MISSING\t << height >>')
@@ -50,7 +104,7 @@ class Sample():
         if diameter:
             self.diameter_m = float(diameter) * length_factor
             self.log.debug(
-                ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [kg]' % (diameter, length_unit, self.diameter_m))
+                ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [m]' % (diameter, length_unit, self.diameter_m))
 
         else:
             self.log.debug('MISSING\t << diameter >>')
@@ -74,17 +128,21 @@ class Sample():
 
     def add_measurement(self, mtype, mfile, machine, mag_method=None):
         implemented = {'af-demag': measurements.Af_Demag,
-                       'hys':measurements.Hysteresis}
-        #todo hys
-        #todo coe
-        #todo irm
-        #todo palint
+                       'hys': measurements.Hysteresis,
+                       'palint': measurements.PalInt,
+                       'zfc': measurements.Zfc_Fc,
+                       'irm': measurements.Irm,
+                       'coe': measurements.Coe,
+        }
+        # todo coe
         if mtype.lower() in implemented:
-            self.log.info(' ADDING\t << measurement >> %s' %mtype)
+            self.log.info(' ADDING\t << measurement >> %s' % mtype)
             measurement = implemented[mtype.lower()](self, mtype, mfile, machine, mag_method)
             if measurement.raw_data:
                 self.measurements.append(measurement)
             return measurement
+        else:
+            self.log.error(' << %s >> not implemented, yet' %(mtype))
 
     ''' RETURN FUNCTIONS '''
 
