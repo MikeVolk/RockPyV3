@@ -1,0 +1,20 @@
+2014-06-04 14:02:37,419 - RockPy.SAMPLE - INFO - CREATING	 new sample << 14a >>
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-06-04 14:02:37,420 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-06-04 14:02:37,420 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - INFO - CREATING	 new sample << 14b >>
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-06-04 14:02:37,420 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-06-04 14:02:37,420 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-06-04 14:02:37,421 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-06-04 14:02:37,421 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-06-04 14:02:37,421 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-06-04 14:02:37,421 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> AF-demag
+2014-06-04 14:02:37,421 - RockPy.MEASUREMENT.AF-DEMAG - DEBUG - FOUND	 measurement type: << af-demag >>
+2014-06-04 14:02:37,421 - RockPy.MEASUREMENT.AF-DEMAG - INFO -  IMPORTING << sushibar , af-demag >> data
+2014-06-04 14:02:37,421 - RockPy.READIN - INFO - IMPORTING	 automag file: << /Users/Mike/PycharmProjects/RockPy V3/test_data/LF6C-TRM(50muT).AF >>
