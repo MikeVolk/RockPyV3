@@ -129,7 +129,7 @@ def orientation_tensor(x, y, z):
     where :math:`x_i'` are the transformed coordinates.
     '''
 
-    from RockPyV2.structure import tensor
+    # from RPV2.structure import tensor
 
     ''' center of mass calculation '''
     mean_x = np.mean(x, dtype=float)
