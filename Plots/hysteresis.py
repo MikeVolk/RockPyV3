@@ -2,11 +2,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc, lines
 
+'''
+This module is used for calling plotting functions
+'''
+
 def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
+    Main plotting of a hysteresis.
+    :param hys_obj: hysteresis object
+
+    :param ax: pyplot.ax object
+    :param norm_factor: normalization of the y-data
+    :param out: choice of:
+
+       - 'show' : shows the plot
+       - 'rtn' : returns the plot
+       - 'save' : saves a pdf of the plot. a folder has to be specified. Name can be specified
+    :param folder: str
+       where the pdf should be saved
+    :param name: str
+       name of the pdf
     '''
+
+    ax.axhline(0, color='#555555') # 0 line horizontally
+    ax.axvline(0, color='#555555') # 0 line vertically
+
     std, = ax.plot(hys_obj.up_field[:, 0], hys_obj.up_field[:, 1] / norm_factor,
-                   color='k')
+                   # color='k',
+                   )
     ax.plot(hys_obj.down_field[:, 0], hys_obj.down_field[:, 1] / norm_factor,
             color=std.get_color())
 
@@ -14,20 +37,25 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
         plt.show()
     if out == 'rtn':
         return ax
-
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
     '''
     ''' VIRGIN '''
-    # todo out options
 
     if hys_obj.virgin != None:
         ax.plot(hys_obj.virgin[:, 0], hys_obj.virgin[:, 1] / norm_factor, color='#808080')
+
     if out == 'show':
         plt.show()
     if out == 'rtn':
         return ax
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
 def plot_mrs_shift(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
@@ -38,22 +66,41 @@ def plot_mrs_shift(hys_obj, ax, norm_factor=1, out='show', folder=None, name='ou
     M_B_Mrs = np.array([[i[0], (i[1] + MRS) / norm_factor] for i in hys_obj.up_field_interpolated if i[0] <= 0])
     ax.plot(M_B_Mrs[:, 0], M_B_Mrs[:, 1], '--', color='k')
 
+    if out == 'show':
+        plt.show()
+    if out == 'rtn':
+        return ax
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_rev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
     '''
     # todo out options
     ax.plot(hys_obj.rev[:, 0], hys_obj.rev[:, 1] / norm_factor, 'k--', label='irreversible')
-    return ax
 
+    if out == 'show':
+        plt.show()
+    if out == 'rtn':
+        return ax
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_irrev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
     '''
     # todo out options
     ax.plot(hys_obj.irr[:, 0], hys_obj.irr[:, 1] / norm_factor, 'k--', label='irreversible')
-    return ax
 
+    if out == 'show':
+        plt.show()
+    if out == 'rtn':
+        return ax
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
@@ -67,6 +114,11 @@ def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, na
     if out == 'show':
         plt.legend()
         plt.show()
+    if out == 'rtn':
+        return ax
+    if out == 'save':
+        if folder != None:
+            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
 
@@ -119,7 +171,7 @@ def add_brh_line(hys_obj, ax, norm_factor=1):
     ''' Brh '''
 
 
-    Brh = hys_obj.Brh()
+    Brh = hys_obj.calculate_brh()
     YMX = max(hys_obj.up_field_interpolated[:, 1])
 
     Brh_line = lines.Line2D([[-Brh[0], -Brh[0]]], [min(hys_obj.down_field[:, 1]) / norm_factor,
@@ -176,7 +228,7 @@ def add_ms_line(hys_obj,ax, norm_factor = 1, text = False):
 
 def add_brh_text(hys_obj,ax):
 
-    Brh = hys_obj.Brh()
+    Brh = hys_obj.calculate_brh()
     ax.text(-Brh[0], 0, '$B_{rh}=%.1f mT$' % (Brh[0] * 1000),
             horizontalalignment='right',
             verticalalignment='bottom',
@@ -184,16 +236,6 @@ def add_brh_text(hys_obj,ax):
     )
     return ax
 
-
-def add_bcr_text(hys_obj,ax):
-
-    ax.text(self.coe.bcri, -max(hys_obj.down_field[:, 1]) / norm_factor,
-            '$B_{cr}=%.2f mT$' % (self.coe.bcri * 1000),
-            horizontalalignment='left',
-            verticalalignment='bottom',
-            fontsize=8,
-    )
-    return ax
 
 
 def add_05ms_text(hys_obj,ax = None, norm_factor=1):
