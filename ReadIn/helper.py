@@ -59,12 +59,14 @@ def claculate_difference(T_xyzm_list1, T_xyzm_list2):
     # print T_xyzm_list1[0]
     # print T_xyzm_list2[0]
     out = np.array([[T_xyzm_list1[i][0],
-                     T_xyzm_list1[i][1] - T_xyzm_list2[i][1],  #X
-                     T_xyzm_list1[i][2] - T_xyzm_list2[i][2],  #Y
-                     T_xyzm_list1[i][3] - T_xyzm_list2[i][3],  #Z
+                     T_xyzm_list1[i][1] - T_xyzm_list2[i][1],  # X
+                     T_xyzm_list1[i][2] - T_xyzm_list2[i][2],  # Y
+                     T_xyzm_list1[i][3] - T_xyzm_list2[i][3],  # Z
                      np.linalg.norm([T_xyzm_list1[i][1] - T_xyzm_list2[i][1],
                                      T_xyzm_list1[i][2] - T_xyzm_list2[i][2],
                                      T_xyzm_list1[i][3] - T_xyzm_list2[i][3]])
                     ]
                     for i in range(len(T_xyzm_list1))])
     return out
+
+

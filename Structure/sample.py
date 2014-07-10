@@ -7,20 +7,49 @@ from RockPyV3.Functions import general, convert
 import measurements
 from RockPyV3.Plots import general as RPplt
 import matplotlib.pyplot as plt
+import csv
+
 
 class SampleGroup():
-    def __init__(self):
+    general.create_logger('RockPy.SAMPLEGROUP')
+
+    def __init__(self, sample_dict=None, sample_list=None, log=None):
+        if not log:
+            self.log = logging.getLogger('RockPy.SAMPLEGROUP')
+        else:
+            self.log = log
+
+        self.log.info('CREATING\t new sample group')
+
         self.samples = []
         self.sample_names = []
+
+        if sample_dict:
+            if type(sample_dict) == list:
+                self.log.error('NO LIST found\t can`t add samples << %s >>' % sorted(sample_dict.keys()))
+                return
+            self.log.info('CREATING\t adding samples << %s >>' % sorted(sample_dict.keys()))
+            self.add_sample_dict(sample_dict)
+
+        if sample_list:
+            if type(sample_list) == dict:
+                self.log.error('NO DICT found\t can`t add samples << %s >>' % sorted(sample_dict.keys()))
+                return
+            self.log.info('CREATING\t adding samples << %s >>' % sorted(sample_dict.keys()))
+            self.add_sample_list(sample_list)
 
     def add_sample(self, sample):
         self.samples.append(sample)
         self.sample_names.append(sample.name)
+        self.sample_names = sorted(self.sample_names)
 
     def add_sample_list(self, sample_list):
         for sample in sample_list:
             self.add_sample(sample)
 
+    def add_sample_dict(self, sample_dict):
+        for sample in sample_dict:
+            self.add_sample(sample_dict[sample])
 
     def pint_average_type(self, step='th'):
         test = []
@@ -62,10 +91,20 @@ class SampleGroup():
             OUT = RPplt.Hys(samples=self.samples, norm=norm, value=value, rtn=rtn).show()
             return OUT
 
+
 class Sample():
     general.create_logger('RockPy.SAMPLE')
 
-    def __init__(self, name, mass=1, mass_unit=None, height=None, diameter=None, length_unit=None):
+    def __init__(self, name, mass=1.0, mass_unit=None, height=None, diameter=None, length_unit=None):
+        """
+
+        :param name: str - name of the sample.
+        :param mass: float - mass of the sample. If not kg then please specify the mass_unit. It is stored in kg.
+        :param mass_unit: str - has to be specified in order to calculate the sample mass properly.
+        :param height: float - sample height - stored in 'm'
+        :param diameter: float - sample diameter - stored in 'm'
+        :param length_unit: str - if not 'm' please specify
+        """
         self.name = name
         self.log = logging.getLogger('RockPy.SAMPLE')
         self.log.info('CREATING\t new sample << %s >>' % self.name)
@@ -133,6 +172,7 @@ class Sample():
                        'zfc': measurements.Zfc_Fc,
                        'irm': measurements.Irm,
                        'coe': measurements.Coe,
+                       'visc': measurements.Viscosity,
         }
         # todo coe
         if mtype.lower() in implemented:
@@ -142,7 +182,7 @@ class Sample():
                 self.measurements.append(measurement)
             return measurement
         else:
-            self.log.error(' << %s >> not implemented, yet' %(mtype))
+            self.log.error(' << %s >> not implemented, yet' % (mtype))
 
     ''' RETURN FUNCTIONS '''
 
@@ -150,13 +190,29 @@ class Sample():
         OUT = self.mass_kg * convert.convert2('kg', mass_unit, 'mass')
         return OUT
 
-    def height(self, mass_unit='mm'):
-        OUT = self.height_m * convert.convert2('m', mass_unit, 'length')
+    def height(self, length_unit='mm'):
+        OUT = self.height_m * convert.convert2('m', length_unit, 'length')
         return OUT
 
-    def diamter(self, mass_unit='mm'):
-        OUT = self.diameter_m * convert.convert2('m', mass_unit, 'length')
+    def diamter(self, length_unit='mm'):
+        OUT = self.diameter_m * convert.convert2('m', length_unit, 'length')
         return OUT
+
+    def infos(self, mass_unit='mg', length_unit='mm', header=True):
+        text = '%s\t ' % self.name
+        hdr = 'Sample\t '
+        if self.mass_kg:
+            text += '%.2f\t ' % (self.mass(mass_unit=mass_unit))
+            hdr += 'mass [%s]\t ' % mass_unit
+        if self.height_m:
+            text += '%.2f\t ' % self.height(length_unit=length_unit)
+            hdr += 'length [%s]\t ' % length_unit
+        if self.diameter_m:
+            text += '%.2f\t ' % self.height(length_unit=length_unit)
+            hdr += 'diameter [%s]\t ' % length_unit
+        if header:
+            print hdr
+        print text
 
     ''' FIND FUNCTIONS '''
 
@@ -175,6 +231,53 @@ class Sample():
             'af-demag': {},
         }
 
+    def plot(self):
+        # def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
+
+        fig = plt.figure()
+
+        mtypes = list(set([i.mtype for i in self.measurements]))
+
+        print mtypes
+
+
+def sample_import(sample_file, mass_unit='mg', length_unit='mm'):
+    '''
+    imports a csv list with mass, diameter and height data.
+    has to be tab separated e.g.:
+
+        Sample	Mass	Height	Diameter
+        1a	320.0	5.17	5.84
+
+    example
+    -------
+
+    samples = RockPyV3.sample_import(sample_file = the_data_file.txt, mass_unit = 'mg', length_unit='mm')
+
+    :param sample_file: str
+    :param mass_unit: str
+    :param length_unit: str
+    '''
+    log = logging.getLogger('RockPy.READIN.get_data')
+    reader_object = csv.reader(open(sample_file), delimiter='\t')
+    list = [i for i in reader_object]
+    header = list[0]
+
+    dict = {i[0]: {header[j].lower(): float(i[j]) for j in range(1, len(i))} for i in list[1:]}
+
+    out = {}
+    for sample in dict:
+        mass = dict[sample].get('mass', None)
+        height = dict[sample].get('height', None)
+        diameter = dict[sample].get('diameter', None)
+        aux = {sample: Sample(sample, mass=mass, height=height, diameter=diameter, mass_unit=mass_unit,
+                              length_unit=length_unit)}
+        out.update(aux)
+
+    return out
+
+
+# ## tests
 
 def run_6c_demag_test():
     test_sample = Sample('6c', mass=324., diameter=14)
@@ -208,5 +311,6 @@ def run_14a():
     RPplt.Af_Demag([sample1, sample2]).show()
 
 
-if __name__ == '__main__':
-    run_14a()
+# if __name__ == '__main__':
+# run_14a()
+

@@ -2,7 +2,7 @@
 __author__ = 'Mike'
 from RockPyV3.Functions import general
 from RockPyV3.ReadIn import machines, helper
-from RockPyV3.fit import fitting, distributions
+from RockPyV3.fit import fitting, distributions, functions
 import treatments
 import logging
 import numpy as np
@@ -14,6 +14,11 @@ from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 from pprint import pprint
 from RockPyV3.Plots.general import Hys_Fabian2003
+from RockPyV3.Plots import hysteresis, viscotity
+from scipy import stats
+import matplotlib
+
+
 class Measurement(object):
     general.create_logger(__name__)
 
@@ -27,8 +32,9 @@ class Measurement(object):
             'palint': '',
             'zfc': '',
             'fc': '',
-            'irm':'',
-            'coe':''
+            'irm': '',
+            'coe': '',
+            'visc': '',
         }
 
         if mtype.lower() in implemented:
@@ -49,7 +55,8 @@ class Measurement(object):
                                     'parm-spectra': machines.sushibar},
                        'vsm': {'hys': machines.vsm,
                                'irm': machines.vsm,
-                               'coe': machines.vsm},
+                               'coe': machines.vsm,
+                               'visc': machines.vsm},
                        'cryo_nl': {'palint': machines.cryo_nl},
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, }}
@@ -104,6 +111,7 @@ class Measurement(object):
             out = np.array([[-i[0], i[1]] for i in out])
         self.log.debug('INTERPOLATION READY')
         return out
+
 
 class Af_Demag(Measurement):
     general.create_logger('RockPy.MEASUREMENT.af-demag')
@@ -171,36 +179,64 @@ class Coe(Measurement):
         self.info = self.raw_data[-1]
         self.measurement_settings = self.info['SCRIPT']
 
-
         if self.measurement_settings['Include IRM?'] == 'Yes':
-            self.fields = self.raw_data[1][1][:,0]
-            self.rem = self.raw_data[1][1][:,1]
-            if self.measurement_settings['Include direct moment?']== 'Yes':
-                self.dmom = self.raw_data[1][1][:,2]
-                self.direct_moment = np.column_stack((self.fields,self.dmom))
+            self.fields = self.raw_data[1][1][:, 0]
+            self.rem = self.raw_data[1][1][:, 1]
+            if self.measurement_settings['Include direct moment?'] == 'Yes':
+                self.dmom = self.raw_data[1][1][:, 2]
+                self.direct_moment = np.column_stack((self.fields, self.dmom))
 
         else:
-            self.fields = self.raw_data[1][0][:,0]
-            self.rem = self.raw_data[1][0][:,1]
-            if self.measurement_settings['Include direct moment?']== 'Yes':
-                self.dmom = self.raw_data[1][0][:,2]
-                self.direct_moment = np.column_stack((self.fields,self.dmom))
+            self.fields = self.raw_data[1][0][:, 0]
+            self.rem = self.raw_data[1][0][:, 1]
+            if self.measurement_settings['Include direct moment?'] == 'Yes':
+                self.dmom = self.raw_data[1][0][:, 2]
+                self.direct_moment = np.column_stack((self.fields, self.dmom))
 
-        self.remanence = np.column_stack((self.fields,self.rem))
-
-
+        self.remanence = np.column_stack((self.fields, self.rem))
 
         self.remanence_interpolated = self.interpolate('remanence')
 
-        if self.measurement_settings['Include direct moment?']== 'Yes':
+        if self.measurement_settings['Include direct moment?'] == 'Yes':
             self.direct_moment_interpolated = self.interpolate('remanence')
         else:
             self.direct_moment_interpolated = []
 
         ''' Bcr calculation '''
-        bcri_idx = np.argmin(abs(self.remanence_interpolated[:,1]))
-        self.bcri = self.remanence_interpolated[bcri_idx][0] # in T
+        # ### taking the 0 crossing in the interpolated data
+        bcri_idx = np.argmin(abs(self.remanence_interpolated[:, 1]))
+        self.bcri = abs(self.remanence_interpolated[bcri_idx][0])  # in T
+        # ### calculation using log normal fitting
+        self.bcr = self.calculate_bcr()  # in  T
         # print self.remanence_interpolated
+
+    def calculate_bcr(self, check=False):
+        '''
+        Calculate using log normal gaussian distributions according to. Only one function will be fitted.
+
+        Leonhardt, R. (2006). Analyzing rock magnetic measurements: The RockMagAnalyzer 1.0 software. Computers \& Geosciences, 32(9), 1420–1431. doi:10.1016/j.cageo.2006.01.006
+
+        '''
+        log_fields = np.log10(np.fabs(self.remanence[:, 0]))
+        # tanh_fit=fitting.Tanh(log_fields, self.remanence[:,1])
+        log_norm_fit = fitting.Log_Normal(log_fields, self.remanence[:, 1] - min(self.remanence[:, 1]))
+        idx = np.argmin(abs(log_norm_fit.fit_y + min(self.remanence[:, 1])))
+        out = 10 ** log_norm_fit.fit_x[idx]
+        if check:
+            plt.axhline(color='k')
+            plt.axvline(color='k')
+            plt.plot(10 ** (log_fields) * 1000, self.rem, '.-', label='data')
+            # plt.plot(10**(tanh_fit.fit_x) *1000,tanh_fit.fit_y, label ='tanh fit')
+            plt.plot(10 ** (log_norm_fit.fit_x) * 1000, log_norm_fit.fit_y + min(self.remanence[:, 1]),
+                     label='log_norm fit')
+            plt.xlabel('log(Field)')
+            plt.ylabel('Moment')
+            plt.title('calculate_bcr check')
+            plt.legend(loc='best')
+            plt.show()
+
+        return out
+
 
 class Irm(Measurement):
     general.create_logger('RockPy.MEASUREMENT.IRM')
@@ -209,18 +245,37 @@ class Irm(Measurement):
         self.log = logging.getLogger('RockPy.MEASUREMENT.IRM')
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
 
-        self.fields = self.raw_data[1][0][:,0]
-        self.rem = self.raw_data[1][0][:,1]
-        self.dmom = self.raw_data[1][0][:,2]
+        self.fields = self.raw_data[1][0][:, 0]
+        self.rem = self.raw_data[1][0][:, 1]
+        self.dmom = self.raw_data[1][0][:, 2]
 
-        self.remanence = np.column_stack((self.fields,self.rem))
-        self.direct_moment = np.column_stack((self.fields,self.dmom))
+        self.remanence = np.column_stack((self.fields, self.rem))
+        self.direct_moment = np.column_stack((self.fields, self.dmom))
 
 
 class Hysteresis(Measurement):
+    '''
+    A subclass of the measurement class. It devides the raw_data give into an **down_field** and **up_field** branch.
+    It will also look or a **virgibn** branch or an :math:`M_{si}` branch.
+
+
+
+    '''
     general.create_logger('RockPy.MEASUREMENT.HYSTERESIS')
 
     def __init__(self, sample, mtype, mfile, machine, mag_method):
+        """
+
+
+        :param sample:
+        :param mtype:
+        :param mfile:
+        :param machine:
+        :param mag_method:
+        :rtype : hysteresis_object
+
+
+        """
         self.log = logging.getLogger('RockPy.MEASUREMENT.HYSTERESIS')
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
         self.info = self.raw_data[2]
@@ -272,112 +327,71 @@ class Hysteresis(Measurement):
 
         self.mrs = self.calculate_mrs()
         self.ms = self.calculate_ms()
-        ### check for msi branch ###
-        ### msi is found, if the first virgin value is 0.9*mrs ###
+        # ## check for msi branch ###
+        # ## msi is found, if the first virgin value is 0.9*mrs ###
 
         if self.virgin != None:
 
-            self.mrs_msi = self.virgin[0,1] / self.mrs[0]
+            self.mrs_msi = self.virgin[0, 1] / self.mrs[0]
 
-            if self.virgin[0,1] >= 0.9 * self.mrs[0]: #todo change back to 0.9
+            if self.virgin[0, 1] >= 0.9 * self.mrs[0]:  # todo change back to 0.9
                 self.log.debug('FOUND\t << Msi branch >> saved as measurement.msi [field,moment]')
                 self.msi = self.virgin
             else:
-                self.log.error('NO\t << Msi branch >> FOUND\t virgin(0)/MRS\t value: %.2f' %(self.mrs_msi))
+                self.log.error('NO\t << Msi branch >> FOUND\t virgin(0)/MRS\t value: %.2f' % (self.mrs_msi))
 
-            self.log.debug('MSI/MRS\t value: %.2f' %(self.mrs_msi))
+            self.log.debug('MSI/MRS\t value: %.2f' % (self.mrs_msi))
+
+    # # Energies ##
 
     def E_delta_t(self):
         '''
         Method calculates the :math:`E^{\Delta}_t` value for the hysteresis.
-        It uses scipy.integrate.simps for calculation of the area under the downfield branch for positive fields
-         and later subtracts the area under the Msi curve.
+        It uses scipy.integrate.simps for calculation of the area under the down_field branch for positive fields and later subtracts the area under the Msi curve.
         '''
         if self.msi != None:
-            df_positive = np.array([i for i in self.down_field if i[0]>0])[::-1]
-            df_energy =  scipy.integrate.simps(df_positive[:,1], x=df_positive[:,0])
-            virgin_energy = scipy.integrate.simps(self.msi[:,1], x=self.msi[:,0])
-            out = 2 * (df_energy-virgin_energy)
+            df_positive = np.array([i for i in self.down_field if i[0] > 0])[::-1]
+            df_energy = scipy.integrate.simps(df_positive[:, 1], x=df_positive[:, 0])
+            virgin_energy = scipy.integrate.simps(self.msi[:, 1], x=self.msi[:, 0])
+            out = 2 * (df_energy - virgin_energy)
             return out
 
         else:
             self.log.error('UNABLE\t to find Msi branch')
             return 0.0
 
+
     def E_hys(self, check=False):
         '''
         '''
         # shifting hysteresis by Ms
-        df = np.array([[i[0], i[1]-min(self.down_field[:,1])] for i in self.down_field])[::-1]
-        uf = np.array([[i[0], i[1]-min(self.up_field[:,1])] for i in self.up_field])
-        df_energy =  scipy.integrate.simps(df[:,1], x=df[:,0])
-        uf_energy =  scipy.integrate.simps(uf[:,1], x=uf[:,0])
+        df = np.array([[i[0], i[1] - min(self.down_field[:, 1])] for i in self.down_field])[::-1]
+        uf = np.array([[i[0], i[1] - min(self.up_field[:, 1])] for i in self.up_field])
+        df_energy = scipy.integrate.simps(df[:, 1], x=df[:, 0])
+        uf_energy = scipy.integrate.simps(uf[:, 1], x=uf[:, 0])
 
         out = df_energy - uf_energy
 
         if check:
-            plt.plot(df[:,0], df[:,1])
-            plt.plot(uf[:,0], uf[:,1])
-            plt.plot([-1,1], [0,0])
+            plt.plot(df[:, 0], df[:, 1])
+            plt.plot(uf[:, 0], uf[:, 1])
+            plt.plot([-1, 1], [0, 0])
             plt.show()
 
         return out
 
-    def calculate_mrs(self, check = None):
-        '''
-        '''
-        ''' interpoalted '''
-        dfi_idx = np.argmin(self.df_interp[:,0]**2)
-        ufi_idx = np.argmin(self.uf_interp[:,0]**2)
-        mrs_dfi = self.df_interp[dfi_idx,1]
-        mrs_ufi = self.uf_interp[ufi_idx,1]
-        mrs_i = (abs(mrs_dfi)+abs(mrs_ufi) ) /2
-        self.log.info('CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' %(mrs_dfi, mrs_ufi, mrs_i))
-
-        ''' non interpolated '''
-        df_idx = np.argmin(self.down_field[:,0]**2)
-        uf_idx = np.argmin(self.up_field[:,0]**2)
-        mrs_df = self.down_field[df_idx,1]
-        mrs_uf = self.up_field[uf_idx,1]
-        mrs = (abs(mrs_df)+abs(mrs_uf) ) /2
-        self.log.info('CALCULATING\t Mrs from NON interpolated data: df: %.1e, uf %.1e, mean: %.2e' %(mrs_df, mrs_uf, mrs))
-
-
-        out = [mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
-        self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
-
-        if check:
-            plt.axhline(0, color='black')
-            plt.axvline(0, color='black')
-            plt.plot(self.down_field[:,0], self.down_field[:,1], 'b.-')
-            plt.plot(self.up_field[:,0], self.up_field[:,1], 'b.-')
-            plt.plot(self.down_field[df_idx,0],self.down_field[df_idx,1], 'ro')
-            plt.plot(self.up_field[uf_idx,0],self.up_field[uf_idx,1], 'ro')
-            plt.plot(self.down_field_interpolated[:,0], self.down_field_interpolated[:,1], 'g--')
-            plt.plot(self.up_field_interpolated[:,0], self.up_field_interpolated[:,1], 'g--')
-            plt.plot(self.down_field_interpolated[dfi_idx,0],self.down_field_interpolated[dfi_idx,1], 'go')
-            plt.plot(self.up_field_interpolated[ufi_idx,0],self.up_field_interpolated[ufi_idx,1], 'go')
-            plt.show()
-
-        return out
-
-    def calculate_ms(self):
-        df_max = max(self.down_field[:,1])
-        uf_max = max(self.up_field[:,1])
-
-        df_min = min(self.down_field[:,1])
-        uf_min = min(self.up_field[:,1])
-
-        ms = np.mean([abs(df_max),abs(uf_max),abs(df_min),abs(uf_min)])
-        ms_sigm = np.std([abs(df_max),abs(uf_max),abs(df_min),abs(uf_min)])
-
-        self.log.info('CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e'%(df_max, df_min, uf_max, uf_min, ms))
-        if df_max/df_min >= 0.1 or df_min/df_max >= 0.1:
-            print 'test'
-        out = [ms, ms_sigm]
-        return out
 
     def approach_sat(self, branch='up_field', step=0.01, check=False, corrected=False):
+        '''
+        This method is supposed to calculate the approach to saturation :math:`M_s` value. It does not work yet.
+
+        :param branch: str
+        :param step: float
+        :param check: bool
+        :param corrected: bool
+        '''
+        self.log.warning('THIS METHOD IS EXPERIMENTAL DO NOT USE FOR DATA ANALYSIS')
+
         data = getattr(self, branch)
         x_new = np.arange(min(data[:, 0]), max(data[:, 0]), step)
         MB = self.interpolate(branch, x_new)
@@ -428,62 +442,314 @@ class Hysteresis(Measurement):
 
 
     def fit_irrev(self):
+        """
+        This method will fit a function to the irreversible part of the hysteresis. It does not work yet.
+
+
+        """
         params = fitting.normal_skewed(self.irr[:, 0], self.irr[:, 1])
         self.field_fit = np.linspace(min(self.irr[:, 0]), max(self.irr[:, 0]), 500)
         self.irrev_fit = distributions.normal_skew(self.field_fit, parameters=params, check=False)
         self.irrev_fit /= max(self.irrev_fit)
 
+
     def correction_holder(self):
-        # todo
+        """
+        This method is supposed to calculate the approach to saturation :math:`M_s` value. It does not work yet.
+
+
+        """
         pass
 
-    def plot_Fabian2003(self, norm = 'mass', out='show', folder=None):
-        Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, out=out, measurement = self).show(out=out, folder=folder)
 
-    def plot(self, norm='mass', out='rtn', virg=False):
+    def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
+        Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, out=out, measurement=self).show(out=out,
+                                                                                                     folder=folder,
+                                                                                                     name=name)
 
-        factor = {'mass': self.sample.mass()}
-        nrm = factor[norm]
-        plot, = plt.plot(self.up_field[:, 0], self.up_field[:, 1] / nrm, label=self.sample.name)
-        plt.plot(self.down_field[:, 0], self.down_field[:, 1] / nrm, color=plot.get_color())
 
-        if self.virgin != None and virg:
-            virg = plt.plot(self.virgin[:, 0], self.virgin[:, 1] / nrm, '.-', color=plot.get_color())
+    def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
+        factor = {'mass': self.sample.mass(),
+                  'max': max(self.down_field[:, 1])}
+        norm_factor = factor[norm]
+
+        if figure == None:
+            fig = plt.figure()
+        else:
+            fig = figure
+
+        ax = fig.add_subplot(111)
+
+        hysteresis.plot_hys(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
+
+        if self.virgin != None and virgin:
+            hysteresis.plot_virgin(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
         if out == 'rtn':
-            plt.xlim([-2, 2])
-            return plot
+            return fig
         if out == 'show':
-            plt.axhline(0, color='black')
-            plt.axvline(0, color='black')
+            plt.show()
+        if out == 'save':
+            if folder != None:
+                plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
+
+    # # calculations ##
+
+
+    def calculate_bc(self, poly=5, check=False):
+        '''
+        Calulates Bc from hysteresis loop. Calculates seperately for up_field and down_field branch.
+        The data gets fitted by a polynomial of degree **poly** (default = 5).
+
+        '''
+        # find where M=0 or closest to 0
+        df_idex = np.argmin(abs(self.down_field[:, 1]))
+        uf_idex = np.argmin(abs(self.up_field[:, 1]))
+
+        # generate data with +- 10 points around Bc
+        df_data = np.array([self.down_field[i] for i in range(df_idex - 6, df_idex + 6)])
+        uf_data = np.array([self.up_field[i] for i in range(uf_idex - 6, uf_idex + 6)])[::-1]
+
+        df_x_new = np.arange(min(df_data[:, 0]), max(df_data[:, 0]), 0.001)
+        uf_x_new = np.arange(min(uf_data[:, 0]), max(uf_data[:, 0]), 0.001)
+
+        df_poly = np.poly1d(np.polyfit(df_data[:, 0], df_data[:, 1], poly))
+        uf_poly = np.poly1d(np.polyfit(uf_data[:, 0], uf_data[:, 1], poly))
+        df_new = map(df_poly, df_x_new)
+        uf_new = map(uf_poly, uf_x_new)
+
+        df_bc = abs(df_poly(0))
+        uf_bc = abs(uf_poly(0))
+
+        out = [np.mean([df_bc, uf_bc]), np.std([df_bc, uf_bc]), df_bc, uf_bc]
+
+        if check:
+            plt.plot(df_data[:, 0], df_data[:, 1], '.')
+            plt.plot(df_x_new, df_new)
+            plt.plot(uf_data[:, 0], uf_data[:, 1], '.')
+            plt.plot(uf_x_new, uf_new)
+            plt.axhline(color='k')
+            plt.axvline(color='k')
+            plt.title('BC calculation check')
+            plt.xlabel('Field')
+            plt.ylabel('Moment')
             plt.show()
 
-    def Brh(self):
+        self.log.info('CALCUATING\t bc for up/downfield using %i polinomial' % poly)
+        self.log.info('RETURNING\t mean, std, bc_downfield, bc_upfield')
+
+        self.bc_mean = np.mean([df_bc, uf_bc])
+        self.bc_std = np.std([df_bc, uf_bc])
+        self.bc_downfield = df_bc
+        self.bc_upfield = uf_bc
+        return out
+
+
+    def calculate_brh(self):
         MRS = self.mrs[0]
-        idx = np.argmin(abs(self.up_field_interpolated[:,1] - MRS))
+        idx = np.argmin(abs(self.up_field_interpolated[:, 1] - MRS))
         out = self.up_field_interpolated[idx]
         return out
+
+    def calculate_mrs(self, check=None):
+        '''
+        '''
+        ''' interpoalted '''
+        dfi_idx = np.argmin(self.df_interp[:, 0] ** 2)
+        ufi_idx = np.argmin(self.uf_interp[:, 0] ** 2)
+        mrs_dfi = self.df_interp[dfi_idx, 1]
+        mrs_ufi = self.uf_interp[ufi_idx, 1]
+        mrs_i = (abs(mrs_dfi) + abs(mrs_ufi) ) / 2
+        self.log.info(
+            'CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' % (mrs_dfi, mrs_ufi, mrs_i))
+
+        ''' non interpolated '''
+        df_idx = np.argmin(self.down_field[:, 0] ** 2)
+        uf_idx = np.argmin(self.up_field[:, 0] ** 2)
+        mrs_df = self.down_field[df_idx, 1]
+        mrs_uf = self.up_field[uf_idx, 1]
+        mrs = (abs(mrs_df) + abs(mrs_uf) ) / 2
+        self.log.info(
+            'CALCULATING\t Mrs from NON interpolated data: df: %.1e, uf %.1e, mean: %.2e' % (mrs_df, mrs_uf, mrs))
+
+        out = [mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
+        self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
+
+        if check:
+            plt.axhline(0, color='black')
+            plt.axvline(0, color='black')
+            plt.plot(self.down_field[:, 0], self.down_field[:, 1], 'b.-')
+            plt.plot(self.up_field[:, 0], self.up_field[:, 1], 'b.-')
+            plt.plot(self.down_field[df_idx, 0], self.down_field[df_idx, 1], 'ro')
+            plt.plot(self.up_field[uf_idx, 0], self.up_field[uf_idx, 1], 'ro')
+            plt.plot(self.down_field_interpolated[:, 0], self.down_field_interpolated[:, 1], 'g--')
+            plt.plot(self.up_field_interpolated[:, 0], self.up_field_interpolated[:, 1], 'g--')
+            plt.plot(self.down_field_interpolated[dfi_idx, 0], self.down_field_interpolated[dfi_idx, 1], 'go')
+            plt.plot(self.up_field_interpolated[ufi_idx, 0], self.up_field_interpolated[ufi_idx, 1], 'go')
+            plt.show()
+
+        return out
+
+
+    def calculate_ms(self, check=None):
+        df_max = max(self.down_field[:, 1])
+        uf_max = max(self.up_field[:, 1])
+
+        df_min = min(self.down_field[:, 1])
+        uf_min = min(self.up_field[:, 1])
+
+        ms = np.mean([abs(df_max), abs(uf_max), abs(df_min), abs(uf_min)])
+        ms_sigm = np.std([abs(df_max), abs(uf_max), abs(df_min), abs(uf_min)])
+
+        self.log.info(
+            'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (df_max, df_min, uf_max, uf_min, ms))
+        if df_max / df_min >= 0.1 or df_min / df_max >= 0.1:
+            print 'test'
+        out = [ms, ms_sigm]
+
+        if check:
+            plt.plot(self.down_field[:, 0], self.down_field[:, 1], label='df+')
+            plt.plot(-self.down_field[:, 0], -self.down_field[:, 1], label='df-')
+            plt.plot(self.up_field[:, 0], self.up_field[:, 1], label='uf+')
+            plt.plot(-self.up_field[:, 0], -self.up_field[:, 1], label='uf-')
+            plt.legend(loc='best')
+            plt.ylim([0.95 * df_max, 1.005 * df_max])
+            plt.xlim([0.7 * max(self.down_field[:, 0]), max(self.down_field[:, 0])])
+            plt.ylabel('Field [T]')
+            plt.xlabel('moment')
+            plt.show()
+
+        return out
+
+    def calculate_sigma_hys(self):
+        '''
+        Calculation accoding to Fabian2003
+
+        math::
+
+           \sigma_{\text{hys}} = log ( \frac{E_{\text{hys}}}{4 M_s B_c}
+        '''
+        # todo
+
+        pass
+
+
+class Viscosity(Measurement):
+    def __init__(self, sample, mtype, mfile, machine, mag_method):
+        self.log = logging.getLogger('RockPy.MEASUREMENT.visc')
+        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+
+        if machine.lower() == 'vsm':
+            self.info = self.raw_data[-1]
+            self.measurement_settings = self.info['SCRIPT']
+
+            self.times = self.raw_data[1][0][1:, 0]  # Time in seconds after start
+            self.moments = self.raw_data[1][0][1:, 1]  # Magnetic Moment
+            self.fields = self.raw_data[1][0][1:, 2]  # Fields in Tesla
+
+            self.log_times = np.log10(self.times)
+
+        self.slope, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(self.log_times,
+                                                                                                self.moments)
+
+    def return_fit(self):
+        # todo refactor
+        print '%s \t %.3e \t %.3e \t %.3e' % (self.sample.name, self.intercept, self.slope, self.std_err)
+
+    def plot(self, norm='max', out='show', virgin=False, folder=None, name='output.pdf', figure=None, **kwargs):
+
+        plt_field = kwargs.get('plt_field', False)
+
+        factor = {'mass': self.sample.mass(),
+                  'max': max(self.moments)}
+
+        self.norm = norm
+        norm_factor = factor[norm]
+
+        params = {'backend': 'ps',
+                  'text.latex.preamble': [r"\usepackage{upgreek}",
+                                          r"\usepackage[nice]{units}"],
+                  'axes.labelsize': 12,
+                  'text.fontsize': 12,
+                  'legend.fontsize': 8,
+                  'xtick.labelsize': 10,
+                  'ytick.labelsize': 10,
+                  'text.usetex': True,
+                  'axes.unicode_minus': True}
+        plt.rcParams.update(params)
+
+        if figure == None:
+            fig = plt.figure(figsize=(11.69, 8.27))
+            plt.subplots_adjust(left=0.08, bottom=None, right=0.94, top=0.87,
+                                wspace=None, hspace=None)
+        else:
+            fig = figure
+
+        fig.suptitle('%s IRM viscous decay' % self.sample.name, fontsize=16)
+
+        ax = fig.add_subplot(111)
+        ax2 = ax.twiny()
+
+        ax.set_ylim([min(self.moments) / norm_factor, max(self.moments) / norm_factor])
+        ax.set_xlim([min(self.log_times), max(self.log_times)])
+
+        viscotity.plot_log_visc(visc_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
+        viscotity.plot_visc(visc_obj=self, ax=ax2, norm_factor=norm_factor, out='rtn', folder=folder, name=name,
+                            plt_opt={'color': 'k', 'linestyle': '--', 'marker': ''},
+        )
+        viscotity.add_formula_text(self, ax=ax)
+        viscotity.add_label(self, ax, log=True)
+        viscotity.add_label(self, ax2, log=False)
+
+        lines, labels = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+
+        # ## plot linear fit
+        x_fit = np.linspace(min(self.log_times), max(self.log_times), 2)
+        y_fit = (self.intercept + self.slope * x_fit) / norm_factor
+        ax.plot(x_fit, y_fit, '--', color='#808080')
+
+        if plt_field:
+            ax3 = ax.twinx()
+            ax3.plot(self.log_times, self.fields * 1000000, 'r', label='residual field - log(t)')
+            ax3.set_ylabel('Field [$\\mu T $]')
+            lines3, labels3 = ax3.get_legend_handles_labels()
+            ax.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='best').draw_frame(False)
+        else:
+            ax.legend(lines + lines2, labels + labels2, loc='best').draw_frame(False)
+
+        if out == 'rtn':
+            return fig
+        if out == 'show':
+            plt.show()
+        if out == 'save':
+            if folder != None:
+                plt.savefig(folder + self.sample.name + '_' + name, dpi=300)
 
 
 class PalInt(Measurement):
     '''
 
     '''
-    general.create_logger('RockPy.MEASUREMENT.PALEOINTENSITY')
+    general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method=None):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.PALEOINTENSITY')
+    def __init__(self, sample, mtype, mfile, machine, mag_method=None, lab_field=35):
+        self.log = logging.getLogger('RockPy.MEASUREMENT.thellier-thellier')
+
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
 
         self.correction = ''
+        self.components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
 
         self.holder = self.raw_data['acryl']
 
         self.nrm = helper.get_type(self.raw_data, 'NRM')
         self.trm = helper.get_type(self.raw_data, 'TRM')
         # check if trm if not replace with NRM for P0 steps
+
         if self.trm == None:
             self.trm = self.nrm
 
+        # get_type gives - T, x, y, z, m
         self.th = helper.get_type(self.raw_data, 'TH')
 
         if self.nrm != None:
@@ -498,6 +764,9 @@ class PalInt(Measurement):
         self.ptrm = self.calculate_ptrm()
         self.sum = self.calculate_sum()
         self.difference = self.calculate_difference()
+
+        self.calculate_arai_fit()
+        self.lab_field = lab_field
 
     def get_data(self, step, type):
         if step not in self.__dict__.keys():
@@ -576,6 +845,17 @@ class PalInt(Measurement):
         self.sum = self.calculate_sum()
         self.ptrm = self.calculate_ptrm()
         self.differnence = self.calculate_difference()
+
+    def calculate_arai_fit(self, component='m', t_min=0, t_max=700, **options):
+        self.log.info('CALCULATING\t << %s >> arai line fit << t_min=%.1f , t_max=%.1f >>' % (component, t_min, t_max))
+        idx = self.components[component]
+        xy = np.array([[i[idx], j[idx]] for i in self.th for j in self.ptrm
+                       if i[0] == j[0]
+                       if i[0] >= t_min if i[0] <= t_max
+                       if j[0] >= t_min if j[0] <= t_max])
+
+        self.slope, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(xy[:, 0], xy[:, 1])
+        return self.slope, self.intercept, self.r_value, self.p_value, self.std_err
 
 
 class Zfc_Fc(Measurement):

@@ -1,6 +1,8 @@
-__author__ = 'Mike'
 # coding=utf-8
+
+__author__ = 'Mike'
 from RockPyV3.Functions import general
+from RockPyV3.Plots import paleointensity
 import logging
 import matplotlib.pyplot as plt
 import matplotlib
@@ -11,8 +13,19 @@ import backfield, hysteresis
 class Plot(object):
     log = general.create_logger('RockPy.PLOTTING')
 
-    def __init__(self, samples, norm=None, log=None, value=None, out='show'):
+    def __init__(self, samples, norm=None, log=None, value=None, out='show', folder=None, name='output.pdf'):
         matplotlib.rcParams.update({'font.size': 10})
+        params = {'backend': 'ps',
+                  'text.latex.preamble': [r"\usepackage{upgreek}",
+                                          r"\usepackage[nice]{units}"],
+                  'axes.labelsize': 12,
+                  'text.fontsize': 12,
+                  'legend.fontsize': 8,
+                  'xtick.labelsize': 10,
+                  'ytick.labelsize': 10,
+                  # 'text.usetex': True,
+                  'axes.unicode_minus': True}
+        plt.rcParams.update(params)
 
         if not log:
             self.log = logging.getLogger('RockPy.PLOTTING')
@@ -20,17 +33,38 @@ class Plot(object):
         if type(samples) is not list:
             self.log.debug('CONVERTING Sample Instance to Samples List')
             samples = [samples]
-        self.out = out
+
+        self.name = name
+
+        if folder == None:
+            from os.path import expanduser
+
+            folder = expanduser("~") + '/Desktop/'
+        self.folder = folder
+
+        out_options = {'show': plt.show,
+                       'rtn': self.get_fig,
+                       'save': self.save_fig}
+        self.out = out_options[out]
+
         self.norm = norm
         self.samples = [i for i in samples]
         self.fig1 = plt.figure(figsize=(8, 8), dpi=100)
         self.ax = plt.subplot2grid((1, 1), (0, 0), colspan=1, rowspan=1)
         self.plot_data = []
         self.ax.xaxis.major.formatter._useMathText = True
+        self.ax.yaxis.major.formatter._useMathText = True
         self.ax.ticklabel_format(style='sci', scilimits=(1, 4), axis='both')
+        plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
 
-        # rc('text', usetex=True)
-        # rc('font', family='serif')
+    def get_ax(self):
+        return self.ax
+
+    def get_fig(self):
+        return self.fig1
+
+    def save_fig(self):
+        plt.savefig(self.folder + self.samples[0].name + '_' + self.name, dpi=300)
 
 
 class Af_Demag(Plot):
@@ -48,11 +82,37 @@ class Af_Demag(Plot):
         plt.show()
 
 
+class Hysteresis(Plot):
+    def __init__(self, sample, norm='mass', log=None, value=None, out='show'):
+        super(Hysteresis, self).__init__(samples=sample, norm=norm, log=log, value=value, out=out)
+        self.measurements = sample.find_measurement('hys')
+
+    def show(self, out='show', folder=None, name='output.pdf'):
+        for measurement in self.measurements:
+            factor = {'mass': measurement.sample.mass_kg,
+                      'max': max(measurement.up_field[:, 1]),
+                      'calibration': measurement.calibration_factor,
+                      None: 1}
+            norm_factor = factor[self.norm]  # # NORMALIZATION FACTOR
+
+            hysteresis.plot_hys(measurement, ax=self.ax, norm_factor=norm_factor, out='rtn')
+
+        if out == 'show':
+            plt.ylim([-1.1, 1.1])
+            plt.show()
+
+        if out == 'save':
+            if folder != None:
+                plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
+
+        if out == 'rtn':
+            return self.fig1
+
+
 class Hys(Plot):
     def __init__(self):
         super(Hys, self).__init__(self, samples, norm=None, log=None, value=None, out='show')
-        self.ax.axhline(0, color='#555555')
-        self.ax.axvline(0, color='#555555')
+
 
     def show(self):
         for sample in self.samples:
@@ -116,10 +176,6 @@ class Hys_Fabian2003(Plot):
         self.norm_factor = self.factor[norm]
         self.ax.xaxis.major.formatter._useMathText = True
         self.ax = plt.subplot2grid((1, 1), (0, 0), colspan=1, rowspan=1)
-        # self.ax_low = plt.subplot2grid((3, 1), (2, 0), sharex=self.ax, colspan=1, rowspan=1)
-        self.ax.axhline(0, color='#555555')
-        self.ax.axvline(0, color='#555555')
-
         plt.suptitle(sample.name)
 
 
@@ -146,6 +202,7 @@ class Hys_Fabian2003(Plot):
         self.ax.set_xlim([min(self.hys.down_field[:, 0]), max(self.hys.down_field[:, 0])])
 
         backfield.plot_coe(coe_obj=self.coe, ax=self.ax, norm_factor=self.norm_factor)
+        backfield.add_bcr_line(coe_obj=self.coe, ax=self.ax, norm_factor=self.norm_factor, method='fit', text=True)
 
         hysteresis.plot_hys(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
         hysteresis.plot_virgin(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
@@ -161,7 +218,7 @@ class Hys_Fabian2003(Plot):
         hysteresis.add_ms_line(hys_obj=self.hys,ax=self.ax, norm_factor=self.norm_factor, text=True)
 
         self.ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-
+        self.add_label(ax=self.ax)
         # handles, labels = self.ax.get_legend_handles_labels()
         # self.ax_low.legend(handles, labels, prop={'size': 8})
         # self.ax_low.legend(loc='best', frameon = False, prop={'size':8})
@@ -175,6 +232,7 @@ class Hys_Fabian2003(Plot):
 
         if out == 'rtn':
             return self.fig1
+
 
 class IRM(Plot):
     def show(self):
@@ -198,3 +256,69 @@ class IRM(Plot):
                 self.ax.legend(handles, labels, prop={'size': 8})
         plt.show()
 
+
+class Dunlop(Plot):
+    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, out='show', folder=None,
+                 name='dunlop plot', **plt_opt):
+        super(Dunlop, self).__init__(samples=sample_obj, norm=norm, log=log, value=value, out=out, folder=folder,
+                                     name=name)
+        self.measurements = sample_obj.find_measurement('palint')
+
+        for measurement in self.measurements:
+            components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
+            factors = {'mass': sample_obj.mass_kg,
+                       'max': measurement.sum[:, components[component]],
+                       'trm': measurement.trm[:, components[component]],
+            }
+
+            norm_factor = factors[norm]
+            idx = self.measurements.index(
+                measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+
+            lines = ['-', '--', ':']
+
+            plt_opt.update({'linestyle': lines[idx]})
+            paleointensity.dunlop(palint_object=measurement, ax=self.ax,
+                                  plt_idx=idx,
+                                  norm_factor=norm_factor, component=component,
+                                  plt_opt=plt_opt)
+
+            paleointensity.add_dunlop_labels(palint_object=measurement, ax=self.ax,
+                                             norm=norm, norm_factor=norm_factor,
+                                             text=True, plt_idx=idx)
+            self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
+
+        self.out()
+
+
+class Arai(Plot):
+    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, out='show', folder=None,
+                 name='arai plot', plt_opt={}):
+        super(Arai, self).__init__(samples=sample_obj, norm=norm, log=log, value=value, out=out, folder=folder,
+                                   name=name)
+        self.measurements = sample_obj.find_measurement('palint')
+
+        for measurement in self.measurements:
+            components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
+            factors = {'mass': sample_obj.mass_kg,
+                       'max': measurement.sum[:, components[component]],
+                       'trm': measurement.trm[:, components[component]],
+            }
+
+            norm_factor = factors[norm]
+            idx = self.measurements.index(
+                measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+
+            lines = ['-', '--', ':']
+
+            if not 'ls' in plt_opt:
+                if not 'linestyle' in plt_opt:
+                    plt_opt.update({'linestyle': lines[idx]})
+
+            paleointensity.arai(palint_object=measurement, ax=self.ax,
+                                plt_idx=idx,
+                                norm_factor=norm_factor, component=component,
+                                plt_opt=plt_opt)
+            self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
+
+        self.out()
