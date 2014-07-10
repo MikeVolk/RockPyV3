@@ -11453,3 +11453,91 @@
 2014-06-27 10:32:10,011 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
 2014-06-27 10:32:10,011 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using UnivariateSpline (Scipy)
 2014-06-27 10:32:10,012 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-03 13:00:46,677 - RockPy.SAMPLE - INFO - CREATING	 new sample << test >>
+2014-07-03 13:00:46,678 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-03 13:00:46,678 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-03 13:00:46,678 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-03 13:00:46,678 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-03 13:00:46,678 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-03 13:00:46,678 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-03 13:00:46,678 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-03 13:03:04,368 - RockPy.SAMPLE - INFO - CREATING	 new sample << FeNi100-A-d-322-M001 >>
+2014-07-03 13:03:04,368 - RockPy.SAMPLE - INFO - CREATING	 new sample << FeNi100-A-d-322-M001 >>
+2014-07-03 13:03:04,368 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-03 13:03:04,368 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-03 13:03:04,368 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-03 13:03:04,368 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-03 13:03:04,369 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-03 13:03:04,369 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> hys
+2014-07-03 13:03:04,369 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> hys
+2014-07-03 13:03:04,369 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 measurement type: << hys >>
+2014-07-03 13:03:04,369 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 measurement type: << hys >>
+2014-07-03 13:03:04,370 - RockPy.MEASUREMENT.HYSTERESIS - INFO -  IMPORTING << vsm , hys >> data
+2014-07-03 13:03:04,370 - RockPy.MEASUREMENT.HYSTERESIS - INFO -  IMPORTING << vsm , hys >> data
+2014-07-03 13:03:04,370 - RockPy.READIN.vsm - INFO - IMPORTING	 VSM file: << /Users/mike/Google Drive/__code/RockPyV3/test_data/FeNi100-A-b-048-M001-140428-002.hys >>
+2014-07-03 13:03:04,370 - RockPy.READIN.vsm - DEBUG - ['Segment   Averaging      Initial        Field         Final                    Final ']
+2014-07-03 13:03:04,370 - RockPy.READIN.vsm - DEBUG - [' Number      Time         Field       Increment       Field         Pause      Index ']
+2014-07-03 13:03:04,370 - RockPy.READIN.vsm - DEBUG - ['             (s)           (T)           (T)           (T)           (s)     ']
+2014-07-03 13:03:04,370 - RockPy.READIN.vsm - DEBUG - ['    Field         Moment   ']
+2014-07-03 13:03:04,371 - RockPy.READIN.vsm - DEBUG - ['     (T)          (Am\xb2)    ']
+2014-07-03 13:03:04,372 - RockPy.READIN.vsm - DEBUG - ['MicroMag 2900/3900 Data File ends']
+2014-07-03 13:03:04,374 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << down_field branch >> saved as measurement.down_field [field,moment]
+2014-07-03 13:03:04,374 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << down_field branch >> saved as measurement.down_field [field,moment]
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << up_field branch >> saved as measurement.up_field [field,moment]
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << up_field branch >> saved as measurement.up_field [field,moment]
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - CALCULATING	 << irreversible >> saved as measurement.irrev [field,moment]
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - CALCULATING	 << irreversible >> saved as measurement.irrev [field,moment]
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << up_field >> using interp1d (Scipy)
+2014-07-03 13:03:04,375 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << up_field >> using interp1d (Scipy)
+2014-07-03 13:03:04,689 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-03 13:03:04,689 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-03 13:03:04,689 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using interp1d (Scipy)
+2014-07-03 13:03:04,689 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using interp1d (Scipy)
+2014-07-03 13:03:04,961 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-03 13:03:04,961 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-03 13:03:05,716 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from interpolated data: df: 7.2e-05, uf -7.3e-05, mean:7.23e-05
+2014-07-03 13:03:05,716 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from interpolated data: df: 7.2e-05, uf -7.3e-05, mean:7.23e-05
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04
+2014-07-03 13:03:05,717 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04
+2014-07-07 11:21:51,571 - RockPy.SAMPLE - INFO - CREATING	 new sample << FeNi100-A-d-322-M001 >>
+2014-07-07 11:21:51,571 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-07 11:21:51,571 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-07 11:21:51,572 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-07 11:21:51,572 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-07 11:21:51,572 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-07 11:21:51,572 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-07 11:21:51,572 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-07 11:21:51,572 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> hys
+2014-07-07 11:21:51,572 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 measurement type: << hys >>
+2014-07-07 11:21:51,572 - RockPy.MEASUREMENT.HYSTERESIS - INFO -  IMPORTING << vsm , hys >> data
+2014-07-07 11:21:51,572 - RockPy.READIN.vsm - INFO - IMPORTING	 VSM file: << /Users/mike/Google Drive/__code/RockPyV3/test_data/FeNi100-A-b-048-M001-140428-002.hys >>
+2014-07-07 11:21:51,592 - RockPy.READIN.vsm - DEBUG - ['Segment   Averaging      Initial        Field         Final                    Final ']
+2014-07-07 11:21:51,592 - RockPy.READIN.vsm - DEBUG - [' Number      Time         Field       Increment       Field         Pause      Index ']
+2014-07-07 11:21:51,592 - RockPy.READIN.vsm - DEBUG - ['             (s)           (T)           (T)           (T)           (s)     ']
+2014-07-07 11:21:51,592 - RockPy.READIN.vsm - DEBUG - ['    Field         Moment   ']
+2014-07-07 11:21:51,592 - RockPy.READIN.vsm - DEBUG - ['     (T)          (Am\xb2)    ']
+2014-07-07 11:21:51,594 - RockPy.READIN.vsm - DEBUG - ['MicroMag 2900/3900 Data File ends']
+2014-07-07 11:21:51,599 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << down_field branch >> saved as measurement.down_field [field,moment]
+2014-07-07 11:21:51,599 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << up_field branch >> saved as measurement.up_field [field,moment]
+2014-07-07 11:21:51,599 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - CALCULATING	 << irreversible >> saved as measurement.irrev [field,moment]
+2014-07-07 11:21:51,599 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << up_field >> using interp1d (Scipy)
+2014-07-07 11:21:51,902 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-07 11:21:51,903 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using interp1d (Scipy)
+2014-07-07 11:21:52,178 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-07 11:21:52,948 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from interpolated data: df: 7.2e-05, uf -7.3e-05, mean:7.23e-05
+2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
+2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
+2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04
