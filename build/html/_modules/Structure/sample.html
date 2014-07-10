@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Structure.sample &mdash; RockPy V3 3.0a1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/bootswatch-3.1.0/lumen/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '3.0a1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../../_static/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="../../_static/js/jquery-fix.js"></script>
+    <script type="text/javascript" src="../../_static/bootstrap-3.1.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="../../_static/bootstrap-sphinx.js"></script>
+    <link rel="top" title="RockPy V3 3.0a1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head>
+  <body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../index.html">
+          RockPy</a>
+        <span class="navbar-text navbar-version pull-left"><b>3.0</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            <li class="divider-vertical"></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorial.html#creating-a-new-sample">Creating a new sample</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorial.html#creating-a-sample-group">Creating a sample group</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../plots.html">Plots</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../plots.html#hysteresis">Hysteresis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../structure.html">Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../structure.html#sample-class">Sample Class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../measurements.html">Measurement</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../measurements.html#hysteresis">Hysteresis</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-12">
+      
+  <h1>Source code for Structure.sample</h1><div class="highlight"><pre>
+<span class="c"># coding=utf-8</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Mike&#39;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
+<span class="kn">from</span> <span class="nn">Functions</span> <span class="kn">import</span> <span class="n">general</span><span class="p">,</span> <span class="n">convert</span>
+<span class="kn">import</span> <span class="nn">measurements</span>
+<span class="kn">from</span> <span class="nn">Plots</span> <span class="kn">import</span> <span class="n">general</span> <span class="k">as</span> <span class="n">RPplt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="k">class</span> <span class="nc">SampleGroup</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_names</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">add_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_sample_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">sample_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">pint_average_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="s">&#39;th&#39;</span><span class="p">):</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">n_temps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">measurement</span> <span class="ow">in</span> <span class="n">sample</span><span class="o">.</span><span class="n">measurements</span><span class="p">:</span>
+                <span class="n">t_aux</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">measurement</span><span class="p">,</span> <span class="n">step</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">measurement</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+                    <span class="n">norm</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">measurement</span><span class="p">,</span> <span class="s">&#39;trm&#39;</span><span class="p">)</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="p">[</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">measurement</span><span class="o">.</span><span class="n">treatment</span><span class="p">),</span> <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+                           <span class="n">i</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]</span>
+                    <span class="n">test</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux</span><span class="p">)</span>
+                <span class="n">n_temps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">t_aux</span><span class="p">))</span>
+
+        <span class="n">test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">test</span><span class="p">)</span>
+        <span class="n">temps</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="o">*</span><span class="n">n_temps</span><span class="p">)))</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">test</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])))</span>
+        <span class="n">measurements</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">test</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])))</span>
+
+        <span class="n">ave</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">measurement</span> <span class="ow">in</span> <span class="n">measurements</span><span class="p">:</span>
+            <span class="n">measurement_ave</span><span class="p">,</span> <span class="n">measurement_std</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">temps</span><span class="p">:</span>
+                <span class="n">Taux</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test</span> <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="n">t</span> <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">measurement</span><span class="p">]</span>
+                <span class="n">Xaux</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test</span> <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="n">t</span> <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">measurement</span><span class="p">]</span>
+                <span class="n">Yaux</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test</span> <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="n">t</span> <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">measurement</span><span class="p">]</span>
+                <span class="n">Zaux</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test</span> <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="n">t</span> <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">measurement</span><span class="p">]</span>
+                <span class="n">Maux</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test</span> <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="n">t</span> <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">measurement</span><span class="p">]</span>
+                <span class="n">t_ave</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Taux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Xaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Yaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Zaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Maux</span><span class="p">)])</span>
+                <span class="n">t_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">Taux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">Xaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">Yaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">Zaux</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">Maux</span><span class="p">)])</span>
+                <span class="n">measurement_ave</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t_ave</span><span class="p">)</span>
+                <span class="n">measurement_std</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t_std</span><span class="p">)</span>
+            <span class="n">ave</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">measurement_ave</span><span class="p">)</span>
+            <span class="n">std</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">measurement_std</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ave</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtype</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s">&#39;mass&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">rtn</span><span class="o">=</span><span class="s">&#39;show&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">mtype</span> <span class="o">==</span> <span class="s">&#39;hys&#39;</span><span class="p">:</span>
+            <span class="n">OUT</span> <span class="o">=</span> <span class="n">RPplt</span><span class="o">.</span><span class="n">Hys</span><span class="p">(</span><span class="n">samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">rtn</span><span class="o">=</span><span class="n">rtn</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">OUT</span>
+
+<div class="viewcode-block" id="Sample"><a class="viewcode-back" href="../../structure.html#Structure.sample.Sample">[docs]</a><span class="k">class</span> <span class="nc">Sample</span><span class="p">():</span>
+    <span class="n">general</span><span class="o">.</span><span class="n">create_logger</span><span class="p">(</span><span class="s">&#39;RockPy.SAMPLE&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">mass_unit</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">diameter</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">length_unit</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param name: str - name of the sample.</span>
+<span class="sd">        :param mass: float - mass of the sample. If not kg then please specify the mass_unit. It is stored in kg.</span>
+<span class="sd">        :param mass_unit: str - has to be specified in order to calculate the sample mass properly.</span>
+<span class="sd">        :param height: float - sample height - stored in &#39;m&#39;</span>
+<span class="sd">        :param diameter: float - sample diameter - stored in &#39;m&#39;</span>
+<span class="sd">        :param length_unit: str - if not &#39;m&#39; please specify</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;RockPy.SAMPLE&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;CREATING</span><span class="se">\t</span><span class="s"> new sample &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">measurements</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">mass_unit</span><span class="p">:</span>
+            <span class="n">mass_factor</span> <span class="o">=</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">,</span> <span class="s">&#39;kg&#39;</span><span class="p">,</span> <span class="s">&#39;mass&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; MISSING</span><span class="se">\t</span><span class="s"> length_unit: assuming &lt;&lt; mm &gt;&gt;&#39;</span><span class="p">)</span>
+            <span class="n">mass_factor</span> <span class="o">=</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="s">&#39;mg&#39;</span><span class="p">,</span> <span class="s">&#39;kg&#39;</span><span class="p">,</span> <span class="s">&#39;mass&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mass</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span> <span class="o">=</span> <span class="n">mass</span> <span class="o">*</span> <span class="n">mass_factor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; mass &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [kg]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mass</span><span class="p">,</span> <span class="n">mass_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;MISSING</span><span class="se">\t</span><span class="s"> &lt;&lt; mass &gt;&gt;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># get length _unit for conversion</span>
+        <span class="k">if</span> <span class="n">length_unit</span><span class="p">:</span>
+            <span class="n">length_factor</span> <span class="o">=</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="n">length_unit</span><span class="p">,</span> <span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; MISSING</span><span class="se">\t</span><span class="s"> mass_unit: assuming &lt;&lt; mg &gt;&gt;&#39;</span><span class="p">)</span>
+            <span class="n">length_factor</span> <span class="o">=</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="s">&#39;mm&#39;</span><span class="p">,</span> <span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">height</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">height</span><span class="p">)</span> <span class="o">*</span> <span class="n">length_factor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; height &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [m]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">length_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span><span class="p">))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;MISSING</span><span class="se">\t</span><span class="s"> &lt;&lt; height &gt;&gt;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">diameter</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">diameter</span><span class="p">)</span> <span class="o">*</span> <span class="n">length_factor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; diameter &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [m]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">diameter</span><span class="p">,</span> <span class="n">length_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span><span class="p">))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;MISSING</span><span class="se">\t</span><span class="s"> &lt;&lt; diameter &gt;&gt;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+    <span class="sd">&#39;&#39;&#39; ADD FUNCTIONS &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">add_mass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">mass_unit</span><span class="o">=</span><span class="s">&#39;mg&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">,</span> <span class="s">&#39;kg&#39;</span><span class="p">,</span> <span class="s">&#39;mass&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; mass &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [kg]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mass</span><span class="p">,</span> <span class="n">mass_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">add_height</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">length_unit</span><span class="o">=</span><span class="s">&#39;mm&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">height</span><span class="p">)</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="n">length_unit</span><span class="p">,</span> <span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; height &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [m]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">length_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">add_diameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diameter</span><span class="p">,</span> <span class="n">length_unit</span><span class="o">=</span><span class="s">&#39;mm&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">diameter</span><span class="p">)</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="n">length_unit</span><span class="p">,</span> <span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; diameter &gt;&gt; input: </span><span class="si">%.1f</span><span class="s"> [</span><span class="si">%s</span><span class="s">] stored: </span><span class="si">%1f</span><span class="s"> [m]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">diameter</span><span class="p">,</span> <span class="n">length_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">add_measurement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtype</span><span class="p">,</span> <span class="n">mfile</span><span class="p">,</span> <span class="n">machine</span><span class="p">,</span> <span class="n">mag_method</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">implemented</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;af-demag&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">Af_Demag</span><span class="p">,</span>
+                       <span class="s">&#39;hys&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">Hysteresis</span><span class="p">,</span>
+                       <span class="s">&#39;palint&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">PalInt</span><span class="p">,</span>
+                       <span class="s">&#39;zfc&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">Zfc_Fc</span><span class="p">,</span>
+                       <span class="s">&#39;irm&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">Irm</span><span class="p">,</span>
+                       <span class="s">&#39;coe&#39;</span><span class="p">:</span> <span class="n">measurements</span><span class="o">.</span><span class="n">Coe</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="c"># todo coe</span>
+        <span class="k">if</span> <span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">implemented</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39; ADDING</span><span class="se">\t</span><span class="s"> &lt;&lt; measurement &gt;&gt; </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mtype</span><span class="p">)</span>
+            <span class="n">measurement</span> <span class="o">=</span> <span class="n">implemented</span><span class="p">[</span><span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()](</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtype</span><span class="p">,</span> <span class="n">mfile</span><span class="p">,</span> <span class="n">machine</span><span class="p">,</span> <span class="n">mag_method</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">measurement</span><span class="o">.</span><span class="n">raw_data</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">measurements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">measurement</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">measurement</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39; &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt; not implemented, yet&#39;</span> <span class="o">%</span><span class="p">(</span><span class="n">mtype</span><span class="p">))</span>
+
+    <span class="sd">&#39;&#39;&#39; RETURN FUNCTIONS &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">mass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass_unit</span><span class="o">=</span><span class="s">&#39;mg&#39;</span><span class="p">):</span>
+        <span class="n">OUT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass_kg</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="s">&#39;kg&#39;</span><span class="p">,</span> <span class="n">mass_unit</span><span class="p">,</span> <span class="s">&#39;mass&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">OUT</span>
+
+    <span class="k">def</span> <span class="nf">height</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass_unit</span><span class="o">=</span><span class="s">&#39;mm&#39;</span><span class="p">):</span>
+        <span class="n">OUT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_m</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="n">mass_unit</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">OUT</span>
+
+    <span class="k">def</span> <span class="nf">diamter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass_unit</span><span class="o">=</span><span class="s">&#39;mm&#39;</span><span class="p">):</span>
+        <span class="n">OUT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter_m</span> <span class="o">*</span> <span class="n">convert</span><span class="o">.</span><span class="n">convert2</span><span class="p">(</span><span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="n">mass_unit</span><span class="p">,</span> <span class="s">&#39;length&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">OUT</span>
+
+    <span class="sd">&#39;&#39;&#39; FIND FUNCTIONS &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">find_measurement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtype</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;SEARCHING</span><span class="se">\t</span><span class="s"> measurements with mtype &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">measurements</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">mtype</span> <span class="o">==</span> <span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;FOUND</span><span class="se">\t</span><span class="s"> sample &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt; has </span><span class="si">%i</span><span class="s"> measurements with mtype &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;UNKNOWN</span><span class="se">\t</span><span class="s"> mtype &lt;&lt; </span><span class="si">%s</span><span class="s"> &gt;&gt; or no measurement found&#39;</span> <span class="o">%</span> <span class="n">mtype</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">def</span> <span class="nf">Experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">experiment_matrix</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&#39;af-demag&#39;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="p">}</span>
+
+</div>
+<span class="k">def</span> <span class="nf">run_6c_demag_test</span><span class="p">():</span>
+    <span class="n">test_sample</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">(</span><span class="s">&#39;6c&#39;</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">324.</span><span class="p">,</span> <span class="n">diameter</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">test_sample</span><span class="o">.</span><span class="n">add_height</span><span class="p">(</span><span class="mi">33</span><span class="p">,</span> <span class="s">&#39;mm&#39;</span><span class="p">)</span>
+    <span class="n">test_sample</span><span class="o">.</span><span class="n">mass</span><span class="p">()</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">test_sample</span><span class="o">.</span><span class="n">add_measurement</span><span class="p">(</span><span class="n">mtype</span><span class="o">=</span><span class="s">&#39;AF-demag&#39;</span><span class="p">,</span>
+                                    <span class="n">mfile</span><span class="o">=</span><span class="s">&#39;/Users/Mike/PycharmProjects/RockPy V3/test_data/LF4c-6c_pdemag_P00.AF&#39;</span><span class="p">,</span>
+                                    <span class="n">machine</span><span class="o">=</span><span class="s">&#39;sushibar&#39;</span><span class="p">,</span> <span class="n">mag_method</span><span class="o">=</span><span class="s">&#39;IRM&#39;</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">test_sample</span><span class="o">.</span><span class="n">add_measurement</span><span class="p">(</span><span class="n">mtype</span><span class="o">=</span><span class="s">&#39;AF-demag&#39;</span><span class="p">,</span>
+                                    <span class="n">mfile</span><span class="o">=</span><span class="s">&#39;/Users/Mike/PycharmProjects/RockPy V3/test_data/LF4c-6c_pdemag_P10.AF&#39;</span><span class="p">,</span>
+                                    <span class="n">machine</span><span class="o">=</span><span class="s">&#39;sushibar&#39;</span><span class="p">,</span> <span class="n">mag_method</span><span class="o">=</span><span class="s">&#39;IRM&#39;</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">add_treatment</span><span class="p">(</span><span class="n">ttype</span><span class="o">=</span><span class="s">&#39;Pressure&#39;</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;p_max&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;p_seen&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">})</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">test_sample</span><span class="o">.</span><span class="n">add_measurement</span><span class="p">(</span><span class="n">mtype</span><span class="o">=</span><span class="s">&#39;AF-demag&#39;</span><span class="p">,</span>
+                                    <span class="n">mfile</span><span class="o">=</span><span class="s">&#39;/Users/Mike/PycharmProjects/RockPy V3/test_data/LF4c-6c_pdemag_P11.AF&#39;</span><span class="p">,</span>
+                                    <span class="n">machine</span><span class="o">=</span><span class="s">&#39;sushibar&#39;</span><span class="p">,</span> <span class="n">mag_method</span><span class="o">=</span><span class="s">&#39;IRMp&#39;</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">add_treatment</span><span class="p">(</span><span class="n">ttype</span><span class="o">=</span><span class="s">&#39;Pressure&#39;</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;p_max&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s">&#39;p_seen&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">})</span>
+    <span class="n">RPplt</span><span class="o">.</span><span class="n">Af_Demag</span><span class="p">(</span><span class="n">test_sample</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">run_14a</span><span class="p">():</span>
+    <span class="n">sample1</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">(</span><span class="s">&#39;14a&#39;</span><span class="p">)</span>
+    <span class="n">sample2</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">(</span><span class="s">&#39;14b&#39;</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">sample1</span><span class="o">.</span><span class="n">add_measurement</span><span class="p">(</span><span class="n">mtype</span><span class="o">=</span><span class="s">&#39;AF-demag&#39;</span><span class="p">,</span>
+                                <span class="n">mfile</span><span class="o">=</span><span class="s">&#39;/Users/Mike/PycharmProjects/RockPy V3/test_data/LF6C-TRM(50muT).AF&#39;</span><span class="p">,</span>
+                                <span class="n">machine</span><span class="o">=</span><span class="s">&#39;sushibar&#39;</span><span class="p">,</span>
+                                <span class="n">mag_method</span><span class="o">=</span><span class="s">&#39;TRM@50µT&#39;</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">sample2</span><span class="o">.</span><span class="n">add_measurement</span><span class="p">(</span><span class="n">mtype</span><span class="o">=</span><span class="s">&#39;AF-demag&#39;</span><span class="p">,</span>
+                                <span class="n">mfile</span><span class="o">=</span><span class="s">&#39;/Users/Mike/PycharmProjects/RockPy V3/test_data/LF6C-TRM(50muT).AF&#39;</span><span class="p">,</span>
+                                <span class="n">machine</span><span class="o">=</span><span class="s">&#39;sushibar&#39;</span><span class="p">,</span>
+                                <span class="n">mag_method</span><span class="o">=</span><span class="s">&#39;TRM@50µT&#39;</span><span class="p">)</span>
+    <span class="n">RPplt</span><span class="o">.</span><span class="n">Af_Demag</span><span class="p">([</span><span class="n">sample1</span><span class="p">,</span> <span class="n">sample2</span><span class="p">])</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">run_14a</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2014, Michael Volk.<br/>
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

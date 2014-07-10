@@ -1,0 +1,24 @@
+Tutorial
+++++++++
+
+Creating a new sample
+---------------------
+A sample is the basic structure of the package. In order to analyze your data you will have to create a new sample first.
+lets start with importing the package.
+
+.. code-block:: python
+
+   from RockPyV3 import Sample
+
+This will import the needed parts of the module, so they can be used.
+
+Now lets create a new sample.
+
+Creating a sample group
+-----------------------
+
+adding a measurement
+--------------------
+
+adding a treatment to a measurement
+===================================
