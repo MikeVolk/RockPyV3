@@ -2,11 +2,16 @@ Measurement
 -----------
 
 .. autoclass:: Structure.measurements.Measurement
-   :members:
+:members:
 
 Hysteresis
 ++++++++++
 
 .. autoclass:: Structure.measurements.Hysteresis
-   :members:
+:members:
 
+Paleointensities
+++++++++++++++++
+
+.. autoclass:: Structure.measurements.Thellier
+:members:

@@ -1,14 +1,17 @@
 # coding=utf-8
 
 __author__ = 'Mike'
+import RockPyV3
 from RockPyV3.Functions import general
 from RockPyV3.Plots import paleointensity
+# from RockPyV3.Structure.measurements import Thellier
 import logging
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib import rc, lines
 import numpy as np
 import backfield, hysteresis
+
 
 class Plot(object):
     log = general.create_logger('RockPy.PLOTTING')
@@ -42,11 +45,6 @@ class Plot(object):
             folder = expanduser("~") + '/Desktop/'
         self.folder = folder
 
-        out_options = {'show': plt.show,
-                       'rtn': self.get_fig,
-                       'save': self.save_fig}
-        self.out = out_options[out]
-
         self.norm = norm
         self.samples = [i for i in samples]
         self.fig1 = plt.figure(figsize=(8, 8), dpi=100)
@@ -56,6 +54,17 @@ class Plot(object):
         self.ax.yaxis.major.formatter._useMathText = True
         self.ax.ticklabel_format(style='sci', scilimits=(1, 4), axis='both')
         plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
+
+    def out(self, out, *args):
+        out_options = {'show': plt.show,
+                       'rtn': self.get_fig,
+                       'save': self.save_fig}
+
+        if out in ['show', 'save']:
+            if not 'nolable' in args:
+                self.ax.set_xlabel(self.x_label)
+                self.ax.set_ylabel(self.y_label)
+        out_options[out]()
 
     def get_ax(self):
         return self.ax
@@ -131,7 +140,8 @@ class Hys(Plot):
                 self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
                 self.log.info('PLOT\t of: %s' % (sample.name))
 
-                std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / self.norm_factor, label=label)
+                std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / self.norm_factor,
+                                    label=label)
                 self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / self.norm_factor,
                              color=std.get_color())
 
@@ -179,7 +189,6 @@ class Hys_Fabian2003(Plot):
         plt.suptitle(sample.name)
 
 
-
     def add_label(self, ax=None):
         if ax == None:
             ax = self.ax
@@ -214,10 +223,10 @@ class Hys_Fabian2003(Plot):
 
         hysteresis.add_virgin_info(self.hys, ax=self.ax, norm_factor=self.norm_factor)
 
-        hysteresis.add_05ms_line(hys_obj=self.hys,ax=self.ax, norm_factor=self.norm_factor, text=True)
-        hysteresis.add_ms_line(hys_obj=self.hys,ax=self.ax, norm_factor=self.norm_factor, text=True)
+        hysteresis.add_05ms_line(hys_obj=self.hys, ax=self.ax, norm_factor=self.norm_factor, text=True)
+        hysteresis.add_ms_line(hys_obj=self.hys, ax=self.ax, norm_factor=self.norm_factor, text=True)
 
-        self.ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        self.ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
         self.add_label(ax=self.ax)
         # handles, labels = self.ax.get_legend_handles_labels()
         # self.ax_low.legend(handles, labels, prop={'size': 8})
@@ -260,9 +269,22 @@ class IRM(Plot):
 class Dunlop(Plot):
     def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, out='show', folder=None,
                  name='dunlop plot', **plt_opt):
+
+
+        measurement_test = False
+
+        if isinstance(sample_obj, RockPyV3.Structure.measurements.Thellier):
+            measurement_test = True
+            self.measurements = [sample_obj]
+
+        if isinstance(sample_obj, RockPyV3.Structure.measurements.Thellier):
+            sample_obj = sample_obj.sample
+
         super(Dunlop, self).__init__(samples=sample_obj, norm=norm, log=log, value=value, out=out, folder=folder,
                                      name=name)
-        self.measurements = sample_obj.find_measurement('palint')
+
+        if not measurement_test:
+            self.measurements = sample_obj.find_measurement('palint')
 
         for measurement in self.measurements:
             components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
@@ -288,24 +310,32 @@ class Dunlop(Plot):
                                              text=True, plt_idx=idx)
             self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
 
-        self.out()
+        self.out(out, 'nolable')
 
 
 class Arai(Plot):
-    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, out='show', folder=None,
+    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None,
+                 t_min=20, t_max=700, line=True, check=True,
+                 out='show', folder=None,
                  name='arai plot', plt_opt={}):
         super(Arai, self).__init__(samples=sample_obj, norm=norm, log=log, value=value, out=out, folder=folder,
                                    name=name)
         self.measurements = sample_obj.find_measurement('palint')
+        self.t_min = t_min
+        self.t_max = t_max
 
         for measurement in self.measurements:
             components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
-            factors = {'mass': sample_obj.mass_kg,
-                       'max': measurement.sum[:, components[component]],
-                       'trm': measurement.trm[:, components[component]],
+            factors = {'mass': [sample_obj.mass_kg, sample_obj.mass_kg],
+                       'max': [max(measurement.sum[:, components[component]]),
+                               max(measurement.sum[:, components[component]])],
+                       'trm': [measurement.trm[:, components[component]], measurement.trm[:, components[component]]],
+                       'th': [measurement.th[0, components[component]], measurement.th[0, components[component]]],
+                       'dnorm': [measurement.ptrm[-1, components[component]], measurement.th[0, components[component]]],
             }
 
             norm_factor = factors[norm]
+
             idx = self.measurements.index(
                 measurement)  # index of measurement used to distinguish repeated measurements on the same sample
 
@@ -316,9 +346,15 @@ class Arai(Plot):
                     plt_opt.update({'linestyle': lines[idx]})
 
             paleointensity.arai(palint_object=measurement, ax=self.ax,
+                                t_min=self.t_min, t_max=self.t_max,
+                                line=line, check=check,
                                 plt_idx=idx,
                                 norm_factor=norm_factor, component=component,
                                 plt_opt=plt_opt)
+
             self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
 
-        self.out()
+        self.x_label = 'pTRM gained'
+        self.y_label = 'NRM remaining'
+
+        self.out(out)

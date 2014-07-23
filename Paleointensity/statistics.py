@@ -2,6 +2,7 @@
 import numpy as np
 import scipy as sp
 from numpy import arctan
+from RockPyV3.Structure.data import tensor
 
 
 def DANG():
@@ -38,12 +39,12 @@ def MAD(x, y, z):
 
     """
     tensor = orientation_tensor(x, y, z)
-    evals = tensor.eigenvalues(norm=True)
+    evals = tensor.evals_norm
     MAD = arctan(np.sqrt(evals[1] ** 2 + evals[2] ** 2) / evals[0])
     return MAD
 
 
-def scatter(palint_obj, quantity='M', debug=False, **kwargs):
+def scatter(palint_obj, component='m', debug=False, **kwargs):
     # todo chose if not to put in paleointensity class
     '''
 
@@ -68,11 +69,6 @@ def scatter(palint_obj, quantity='M', debug=False, **kwargs):
     scatter = palint_obj.slope[quantity][1] / abs(palint_obj.slope[quantity][0])
 
     return scatter
-
-
-def remanence_f():
-    # todo
-    pass
 
 
 def DRATS():
@@ -144,8 +140,8 @@ def orientation_tensor(x, y, z):
     orientation_matrix = np.array([[np.sum(diff_x * diff_x), np.sum(diff_x * diff_y), np.sum(diff_x * diff_z)],
                                    [np.sum(diff_y * diff_x), np.sum(diff_y * diff_y), np.sum(diff_y * diff_z)],
                                    [np.sum(diff_z * diff_x), np.sum(diff_z * diff_y), np.sum(diff_z * diff_z)]])
-    tensor = tensor(orientation_matrix)
-    return tensor
+    T = tensor(orientation_matrix)
+    return T
 
 
 if __name__ == '__main__':

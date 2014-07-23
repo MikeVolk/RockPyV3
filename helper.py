@@ -1,6 +1,7 @@
 __author__ = 'mike'
 from math import pi
 
+
 def convert_pressure(diameter, force, **kwargs):
     # check units
     force_unit = kwargs.get('force', 'T')
@@ -42,6 +43,7 @@ def convert_pressure(diameter, force, **kwargs):
                 print('Pressure: %.2f[%s]' % (pressure, pressure_unit))
 
     return pressure
+
 
 def convert2(in_unit, out_unit, unit):
     """
@@ -153,7 +155,7 @@ def conversion(unit):
     }
 
     if unit == 'all':
-        #print 'test'
+        # print 'test'
         return conversion_table
     else:
         if not unit in conversion_table:
@@ -161,3 +163,6 @@ def conversion(unit):
             return
         else:
             return conversion_table[unit]
+
+
+

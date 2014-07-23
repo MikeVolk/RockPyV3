@@ -18,8 +18,8 @@ def sushibar(file, sample=None):
         'M': [8, float], 'Dc': [9, float], 'Ic': [10, float], 'Dg': [11, float], 'Ig': [12, float],
         'Ds': [13, float], 'Is': [14, float], 'a95': [15, float], 'sM': [16, float],
         'npos': [17, float], 'Dspin': [18, float], 'Ispin': [19, float],  # 'holder/sample': [20, float],
-        #'cup/sample': [21, float],
-        'bl diff/sample': [22, float],  #'steps/rev': [23, float],
+        # 'cup/sample': [21, float],
+        'bl diff/sample': [22, float],  # 'steps/rev': [23, float],
         'par1': [24, float], 'par2': [25, float], 'par3': [26, float], 'par4': [27, float],
         'par5': [28, float], 'par6': [29, float], 'strat_level': [30, float], 'geoaz': [31, float],
         'hade': [32, float], 'dipdir': [33, float], 'dip': [34, float]
@@ -58,7 +58,7 @@ def cryo_nl(file, sample=None):
     header = {
         'sample': [0, str],
         # 'coreaz': [1, float], 'coredip': [2, float], 'bedaz': [3, float], 'beddip': [4, float],
-        #'vol': [5, float], 'weight': [6, float],
+        # 'vol': [5, float], 'weight': [6, float],
         'step': [7, float],
         'type': [8, str], 'comment': [9, str], 'time': [10, str], 'mode': [11, str],
         'x': [12, float], 'y': [13, float], 'z': [14, float], 'M': [15, float],
@@ -66,7 +66,30 @@ def cryo_nl(file, sample=None):
         # 'dg': [20, float], 'ig': [21, float],
         # 'ds': [22, float], 'is': [23, float],
     }
-    out = {column.lower(): helper.get_data(file, header, column, header_skip=2) for column in header}
+    header_no_mode = {
+        'sample': [0, str],
+        # 'coreaz': [1, float], 'coredip': [2, float], 'bedaz': [3, float], 'beddip': [4, float],
+        # 'vol': [5, float], 'weight': [6, float],
+        'step': [7, float],
+        'type': [8, str], 'comment': [9, str], 'time': [10, str],
+        'x': [11, float], 'y': [12, float], 'z': [13, float], 'M': [14, float],
+        'sm': [15, float], 'a95': [16, float], 'dc': [17, float], 'ic': [18, float],
+        # 'dg': [20, float], 'ig': [21, float],
+        # 'ds': [22, float], 'is': [23, float],
+    }
+
+    data = helper.import_file(file=file, header_skip=1)
+    file_header = data[0]
+
+    if 'mode' not in file_header:
+        header = header_no_mode
+
+    data = np.array(data[1:], dtype=object)
+    data = np.array([[value for value in line] for line in data]).T
+    out = {column.lower(): map(header[column][1], data[header[column][0]]) for column in sorted(header)}
+
+    if 'mode' not in file_header:
+        out['mode'] = ['results' for i in out['sample']]
 
     if sample:
         samples = list(set(out['sample']))
@@ -75,13 +98,17 @@ def cryo_nl(file, sample=None):
             return None
         else:
             if len(samples) > 1:
-                sample_idx = np.where((out['sample'] == sample) & (out['mode'] == 'results'))[0]
-                acryl_idx = np.where((out['sample'] == 'acryl') & (out['mode'] == 'results'))[0]
-                acryl = {}
+                sample_idx = [i for i in range(len(out['sample']))
+                              if out['sample'][i] == sample
+                              if out['mode'][i] == 'results']
+                holder_idx = [i for i in range(len(out['sample']))
+                              if out['sample'][i] in ['holder', 'acryl']
+                              if out['mode'][i] == 'results']
+                holder = {}
                 for key in out:
-                    acryl[key] = np.array([out[key][i] for i in acryl_idx])
+                    holder[key] = np.array([out[key][i] for i in holder_idx])
                     out[key] = np.array([out[key][i] for i in sample_idx])
-                out['acryl'] = acryl
+                out['acryl'] = holder
     out['time'] = [time.strptime(i, "%y-%m-%d %H:%M:%S") for i in out['time']]
     log.info(
         'RETURNING\t %i data types with %i data points for sample: << %s >>' % (len(out), len(out['sample']), sample))
@@ -174,18 +201,19 @@ def mpms(files, sample=None):
         header = {'Time': [0, float], 'Comment': [1, str], 'Field (Oe)': [2, float], 'Temperature (K)': [3, float],
                   'Long Moment (emu)': [4, float], 'Long Scan Std Dev': [5, float], 'Long Offset (cm)': [6, float],
                   # 'Long Offset Std Dev': [7, float], 'Long Algorithm': [8, float], 'Long Reg Fit': [9, float],
-                  #'Long Reg Factor': [10, float], 'Trans Moment (emu)': [11, float], 'Trans Scan Std Dev': [12, float],
-                  #'Trans Offset (cm)': [13, float], 'Trans Offset Std Dev': [14, float],
+                  # 'Long Reg Factor': [10, float], 'Trans Moment (emu)': [11, float], 'Trans Scan Std Dev': [12, float],
+                  # 'Trans Offset (cm)': [13, float], 'Trans Offset Std Dev': [14, float],
                   # Trans Algorithm,Trans Reg Fit,Trans Reg Factor,Long Moment [w/o ABS] (emu),Long Scan Std Dev [w/o ABS],Long Offset [w/o ABS] (cm),
                   # Long Offset Std Dev [w/o ABS],Long Reg Fit [w/o ABS],Trans Moment [w/o ABS] (emu),Trans Scan Std Dev [w/o ABS],Trans Offset [w/o ABS] (cm),
                   # Trans Offset Std Dev [w/o ABS],Trans Reg Fit [w/o ABS],RSO Position (deg),Amplitude (cm),Frequency,Cycles to Average,Scans per Measurement,
-                  'Delta Temp (K)':[34,float],#Error,EC Comp. Running,Using ABS,'}
+                  'Delta Temp (K)': [34, float],  #Error,EC Comp. Running,Using ABS,'}
         }
 
         aux = [i for i in reader_object][31:]
-        out_aux = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in aux]) for column in header}
+        out_aux = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in aux]) for column in
+                   header}
         out.append(out_aux)
 
-    out = {key:[out[0][key], out[1][key]] for key in out[0]}
-    out['time'] = [ map(time.localtime, i ) for i in out['time']]
+    out = {key: [out[0][key], out[1][key]] for key in out[0]}
+    out['time'] = [map(time.localtime, i) for i in out['time']]
     return out

@@ -11541,3 +11541,54 @@
 2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
 2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
 2014-07-07 11:21:52,949 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04
+2014-07-22 10:44:26,172 - RockPy.SAMPLE - INFO - CREATING	 new sample << FeNi100-A-d-322-M001 >>
+2014-07-22 10:44:26,172 - RockPy.SAMPLE - INFO - CREATING	 new sample << FeNi100-A-d-322-M001 >>
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - INFO -  MISSING	 length_unit: assuming << mm >>
+2014-07-22 10:44:26,173 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-22 10:44:26,173 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mg -> kg : FACTOR = 1.00e-06
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - DEBUG -  ADDING	 << mass >> input: 1.0 [None] stored: 0.000001 [kg]
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-22 10:44:26,173 - RockPy.SAMPLE - INFO -  MISSING	 mass_unit: assuming << mg >>
+2014-07-22 10:44:26,174 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-22 10:44:26,174 - RockPy.HELPER_FUNCTIONS - DEBUG - CONVERSION mm -> m : FACTOR = 1.00e-03
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - DEBUG - MISSING	 << height >>
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - DEBUG - MISSING	 << diameter >>
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> hys
+2014-07-22 10:44:26,174 - RockPy.SAMPLE - INFO -  ADDING	 << measurement >> hys
+2014-07-22 10:44:26,175 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 measurement type: << hys >>
+2014-07-22 10:44:26,175 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 measurement type: << hys >>
+2014-07-22 10:44:26,175 - RockPy.MEASUREMENT.HYSTERESIS - INFO -  IMPORTING << vsm , hys >> data
+2014-07-22 10:44:26,175 - RockPy.MEASUREMENT.HYSTERESIS - INFO -  IMPORTING << vsm , hys >> data
+2014-07-22 10:44:26,175 - RockPy.READIN.vsm - INFO - IMPORTING	 VSM file: << /Users/mike/Google Drive/__code/RockPyV3/test_data/FeNi100-A-b-048-M001-140428-002.hys >>
+2014-07-22 10:44:26,195 - RockPy.READIN.vsm - DEBUG - ['Segment   Averaging      Initial        Field         Final                    Final ']
+2014-07-22 10:44:26,196 - RockPy.READIN.vsm - DEBUG - [' Number      Time         Field       Increment       Field         Pause      Index ']
+2014-07-22 10:44:26,196 - RockPy.READIN.vsm - DEBUG - ['             (s)           (T)           (T)           (T)           (s)     ']
+2014-07-22 10:44:26,196 - RockPy.READIN.vsm - DEBUG - ['    Field         Moment   ']
+2014-07-22 10:44:26,196 - RockPy.READIN.vsm - DEBUG - ['     (T)          (Am\xb2)    ']
+2014-07-22 10:44:26,197 - RockPy.READIN.vsm - DEBUG - ['MicroMag 2900/3900 Data File ends']
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << down_field branch >> saved as measurement.down_field [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << down_field branch >> saved as measurement.down_field [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << up_field branch >> saved as measurement.up_field [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - FOUND	 << up_field branch >> saved as measurement.up_field [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - CALCULATING	 << irreversible >> saved as measurement.irrev [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - CALCULATING	 << irreversible >> saved as measurement.irrev [field,moment]
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << up_field >> using interp1d (Scipy)
+2014-07-22 10:44:26,200 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << up_field >> using interp1d (Scipy)
+2014-07-22 10:44:26,501 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-22 10:44:26,501 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-22 10:44:26,501 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using interp1d (Scipy)
+2014-07-22 10:44:26,501 - RockPy.MEASUREMENT.HYSTERESIS - INFO - INTERPOLATIN << down_field >> using interp1d (Scipy)
+2014-07-22 10:44:26,779 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-22 10:44:26,779 - RockPy.MEASUREMENT.HYSTERESIS - DEBUG - INTERPOLATION READY
+2014-07-22 10:44:27,522 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from interpolated data: df: 7.2e-05, uf -7.3e-05, mean:7.23e-05
+2014-07-22 10:44:27,522 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from interpolated data: df: 7.2e-05, uf -7.3e-05, mean:7.23e-05
+2014-07-22 10:44:27,522 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
+2014-07-22 10:44:27,522 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Mrs from NON interpolated data: df: 7.3e-05, uf -7.2e-05, mean: 7.24e-05
+2014-07-22 10:44:27,523 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
+2014-07-22 10:44:27,523 - RockPy.MEASUREMENT.HYSTERESIS - INFO - RETURNING	 mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf
+2014-07-22 10:44:27,523 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04
+2014-07-22 10:44:27,523 - RockPy.MEASUREMENT.HYSTERESIS - INFO - CALCULATING	 Ms: df:(7.58e-04,-7.58e-04), uf:(7.59e-04,-7.58e-04), mean: 7.58e-04

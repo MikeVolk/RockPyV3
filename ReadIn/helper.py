@@ -2,6 +2,17 @@ __author__ = 'Mike'
 import logging
 import csv
 import numpy as np
+import time
+
+
+def import_file(file, header_skip, delimiter='\t'):
+    log = logging.getLogger('RockPy.READIN.import_file')
+    '''
+    help function
+    '''
+    reader_object = csv.reader(open(file), delimiter=delimiter)
+    out = [[value for value in line] for line in reader_object]
+    return np.array(out)[header_skip:]
 
 
 def get_data(file, header, column_name, header_skip, delimiter='\t'):
@@ -38,7 +49,7 @@ def check_duplicates(T_xyz_list):
         return out
 
 
-def get_type(dict, type):
+def get_type(dict, type, **options):
     log = logging.getLogger('RockPy.READIN.get_type')
     if type in dict['type']:
 
@@ -49,8 +60,9 @@ def get_type(dict, type):
         return None
     type_indx = np.where(dict['type'] == type)[0]
     out = np.array([[dict['step'][i],
-                     dict['x'][i], dict['y'][i], dict['z'][i], dict['m'][i]]
-                    for i in type_indx])
+                     dict['x'][i], dict['y'][i], dict['z'][i], dict['m'][i], time.mktime(dict['time'][i])]
+                    for i in list(type_indx)])
+
     out = check_duplicates(out)
     return out
 

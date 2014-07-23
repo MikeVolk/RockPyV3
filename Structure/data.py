@@ -12,6 +12,8 @@ class tensor():
 
         '''
         self.tensor = tensor
+        self.get_eigensystem()
+
 
     def get_eigensystem(self, norm=False):
         '''
@@ -27,19 +29,4 @@ class tensor():
         evecs = evecs[:, idx]
         norm_evals = [i / sum(evals) for i in evals]
         self.evecs = np.array(evecs)
-        self.norm_evals = norm_evals
-
-        if norm:
-            return self.norm_evals, self.evecs
-        else:
-            return self.evals, self.evecs
-
-    def eigenvalues(self, norm=False):
-        self.get_eigensystem()
-        if norm:
-            return self.norm_evals
-        else:
-            return self.evals
-
-    def eigenvectors(self):
-        self.get_eigensystem()
+        self.evals_norm = norm_evals

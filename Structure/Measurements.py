@@ -3,6 +3,9 @@ __author__ = 'Mike'
 from RockPyV3.Functions import general
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
+from RockPyV3.Plots.general import Hys_Fabian2003, Dunlop
+from RockPyV3.Plots import hysteresis, viscotity
+from RockPyV3.Paleointensity import statistics
 import treatments
 import logging
 import numpy as np
@@ -13,10 +16,9 @@ from scipy.interpolate import UnivariateSpline
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 from pprint import pprint
-from RockPyV3.Plots.general import Hys_Fabian2003
-from RockPyV3.Plots import hysteresis, viscotity
 from scipy import stats
 import matplotlib
+import csv
 
 
 class Measurement(object):
@@ -60,7 +62,9 @@ class Measurement(object):
                        'cryo_nl': {'palint': machines.cryo_nl},
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, }}
+
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
+
         if self.machine in implemented:
             if self.mtype in implemented[self.machine]:
                 self.raw_data = implemented[self.machine][self.mtype](self.mfile, self.sample.name)
@@ -673,7 +677,7 @@ class Viscosity(Measurement):
                   'legend.fontsize': 8,
                   'xtick.labelsize': 10,
                   'ytick.labelsize': 10,
-                  'text.usetex': True,
+                  'text.usetex': False,
                   'axes.unicode_minus': True}
         plt.rcParams.update(params)
 
@@ -726,7 +730,7 @@ class Viscosity(Measurement):
                 plt.savefig(folder + self.sample.name + '_' + name, dpi=300)
 
 
-class PalInt(Measurement):
+class Thellier(Measurement):
     '''
 
     '''
@@ -744,16 +748,26 @@ class PalInt(Measurement):
 
         self.nrm = helper.get_type(self.raw_data, 'NRM')
         self.trm = helper.get_type(self.raw_data, 'TRM')
-        # check if trm if not replace with NRM for P0 steps
-
-        if self.trm == None:
-            self.trm = self.nrm
 
         # get_type gives - T, x, y, z, m
         self.th = helper.get_type(self.raw_data, 'TH')
 
+        types = list(set(self.raw_data['type']))
+
         if self.nrm != None:
             self.th = np.vstack((self.nrm, self.th))
+
+        # check if trm if not replace with NRM for P0 steps
+        if not 'NRM' in types and not 'TRM' in types:
+            self.trm = np.array([self.th[0]])
+            self.nrm = np.array([self.th[0]])
+
+        if self.trm == None:
+            self.trm = self.nrm
+
+        if self.nrm == None:
+            self.nrm = self.trm
+
 
         self.pt = np.vstack((self.th[0], helper.get_type(self.raw_data, 'PT')))
 
@@ -765,7 +779,6 @@ class PalInt(Measurement):
         self.sum = self.calculate_sum()
         self.difference = self.calculate_difference()
 
-        self.calculate_arai_fit()
         self.lab_field = lab_field
 
     def get_data(self, step, type):
@@ -777,30 +790,119 @@ class PalInt(Measurement):
         out = getattr(self, step)[:, types[type]]
         return out
 
+    def _get_th_ptrm_data(self, t_min=20, t_max=700):
+        """
+        Returns th, ptrm data
+
+        :param t_min: float
+        :param t_max: float
+        :return: ndarray
+        """
+        xy_data = np.array([[i[1:4], j[1:4]] for i in self.th for j in self.ptrm
+                            if i[0] == j[0]
+                            if t_min <= i[0] <= t_max
+                            if t_min <= j[0] <= t_max])
+
+        x = xy_data[:, 0]
+        y = xy_data[:, 1]
+        return x, y
+
+    def _get_ck_data(self):
+        '''
+        Helper function, returns the preceding th steps to each ck step
+
+        :returns: list [ck_ij, th_i, ptrm_j, th_j]
+           where ck_ij = the ptrm check to the ith temperature after heating to the jth temperature
+        '''
+        out = []
+
+        for ck in self.ck:
+            th_j = [0, 0, 0, 0, 0]
+            for th in self.th:
+                if ck[-1] > th[-1]:
+                    if th_j[-1] < th[-1]:
+                        th_j = th
+                if ck[0] == th[0]:
+                    th_i = th
+            for ptrm in self.ptrm:
+                if ptrm[0] == th_j[0]:
+                    ptrm_j = ptrm
+            for pt in self.pt:
+                if pt[0] == th_i[0]:
+                    pt_i = pt
+                    # print ptrm
+            d_ck = ck[1:4] - th_j[1:4]
+            d_ck_m = np.linalg.norm(d_ck)
+            d_ck = np.array([ck[0], d_ck[0], d_ck[1], d_ck[2], d_ck_m, ck[-1]])
+
+            out.append([d_ck, th_i, ptrm_j, th_j])
+        return out
+
+    def _get_ac_data(self):
+        '''
+        Helper function, returns the preceding th steps to each ck step
+
+        :returns: list [ck_ij, th_i, ptrm_j, th_j]
+           where ck_ij = the ptrm check to the ith temperature after heating to the jth temperature
+        '''
+        out = []
+
+        for ac in self.ac:
+            th_j = [0, 0, 0, 0, 0]
+            for th in self.th:
+                if ac[-1] > th[-1]:
+                    if th_j[-1] < th[-1]:
+                        th_j = th
+                if ac[0] == th[0]:
+                    th_i = th
+            for ptrm in self.ptrm:
+                if ptrm[0] == th_j[0]:
+                    ptrm_j = ptrm
+            for pt in self.pt:
+                if pt[0] == th_j[0]:
+                    pt_i = pt
+                    # print ptrm
+            d_ac = pt_i[1:4] - ac[1:4]
+            d_ac_m = np.linalg.norm(d_ac)
+            d_ac = np.array([ac[0], d_ac[0], d_ac[1], d_ac[2], d_ac_m, ac[-1]])
+
+            out.append([d_ac, th_i, ptrm_j, th_j])
+        return out
+
+    def flip_ptrm(self):
+        self.ptrm[:, 1:3] = - self.ptrm[:, 1:3]
+        self.pt[:, 1:3] = self.th[:, 1:3] + self.ptrm[:, 1:3]
 
     def calculate_ptrm(self):
         self.log.info('CALCULATING\t PTRM')
-        out = np.array([[i[0],
-                         j[1] - i[1],  # X
-                         j[2] - i[2],  # Y
-                         j[3] - i[3],  # Z
-                         np.linalg.norm([j[1] - i[1], j[2] - i[2], j[3] - i[3]])
-                        ]
+        aux = np.array([[i, j]
                         for i in self.th for j in self.pt
                         if i[0] == j[0]])
+        th = aux[:, 0][:, 1:4]
+        pt = aux[:, 1][:, 1:4]
+        ptrm = th - pt
+        times = aux[:, 1][:, -1]
+        temps = aux[:, 0][:, 0]
+        ptrm_m = [np.linalg.norm(i) for i in ptrm]
+
+        out = np.c_[temps, ptrm, ptrm_m, times]
+
         return out
 
     def calculate_sum(self):
 
         self.log.info('CALCULATING\t SUM')
         out = np.array([[i[0],
-                         j[1] + i[1],  # X
-                         j[2] + i[2],  # Y
-                         j[3] + i[3],  # Z
-                         np.linalg.norm([j[1] + i[1], j[2] + i[2], j[3] + i[3]])
+                         abs(j[1]) + abs(i[1]),  # X
+                         abs(j[2]) + abs(i[2]),  # Y
+                         abs(j[3]) + abs(i[3])  # Z
                         ]
                         for i in self.th for j in self.ptrm
                         if i[0] == j[0]])
+
+        aux = out[:, 1:]
+        aux = [np.linalg.norm(i) for i in aux]
+        out = np.c_[out, aux]
         return out
 
     def calculate_difference(self):
@@ -846,7 +948,24 @@ class PalInt(Measurement):
         self.ptrm = self.calculate_ptrm()
         self.differnence = self.calculate_difference()
 
+
+    def intensity(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        out = self.lab_field * abs(slopes)
+        return out
+
+    def std_error(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        out = self.lab_field * sigmas
+        return out
+
+
+    ''' Statistic Methods '''
+
     def calculate_arai_fit(self, component='m', t_min=0, t_max=700, **options):
+        '''
+        maybe not appropriate, because it only minimizes the y residual
+        '''
         self.log.info('CALCULATING\t << %s >> arai line fit << t_min=%.1f , t_max=%.1f >>' % (component, t_min, t_max))
         idx = self.components[component]
         xy = np.array([[i[idx], j[idx]] for i in self.th for j in self.ptrm
@@ -855,7 +974,479 @@ class PalInt(Measurement):
                        if j[0] >= t_min if j[0] <= t_max])
 
         self.slope, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(xy[:, 0], xy[:, 1])
-        return self.slope, self.intercept, self.r_value, self.p_value, self.std_err
+        return self.slope, self.intercept, self.std_err, self.r_value, self.p_value
+
+    def MAD(self, step='th'):
+        step = step.lower()
+        xyz = getattr(self, step)
+        x = xyz[:, 1]
+        y = xyz[:, 2]
+        z = xyz[:, 3]
+        MAD = statistics.MAD(x, y, z)
+        return MAD
+
+    def calculate_slope(self, t_min=20, t_max=700, **options):
+        self.log.info('CALCULATING\t arai line fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
+
+        # xy_data = np.array([[i, j] for i in self.th for j in self.ptrm
+        # if i[0] == j[0]
+        # if t_min <= i[0] <= t_max
+        #        if t_min <= j[0] <= t_max])
+        #
+        # y = xy_data[:,0]
+        # y = y[:,1:4]
+        #
+        # x = xy_data[:,1]
+        # x = x[:,1:4]
+
+        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+        y = np.fabs(y)
+        x = np.fabs(x)
+
+        x_m = [np.linalg.norm(i) for i in x]  # add M data
+        x = np.c_[x, x_m]  # append M data column
+
+        y_m = [np.linalg.norm(i) for i in y]  # add M data
+        y = np.c_[y, y_m]  # append M data column
+
+        ''' calculate averages '''
+
+        x_mean = np.mean(x, axis=0)
+        y_mean = np.mean(y, axis=0)
+
+        ''' calculate differences '''
+        x_diff = x - x_mean
+        y_diff = y - y_mean
+
+        ''' square differences '''
+        x_diff_sq = x_diff ** 2
+        y_diff_sq = y_diff ** 2
+
+        ''' sum squared differences '''
+        x_sum_diff_sq = np.sum(x_diff_sq, axis=0)
+        y_sum_diff_sq = np.sum(y_diff_sq, axis=0)
+
+        mixed = x_diff * y_diff
+        mixed_sum = np.sum(x_diff * y_diff, axis=0)
+        ''' calculate slopes '''
+        N = len(x)
+
+        slopes = np.sqrt(y_sum_diff_sq / x_sum_diff_sq) * np.sign(mixed_sum)
+
+        sigmas = np.sqrt((2 * y_sum_diff_sq - 2 * slopes * mixed_sum) / ( (N - 2) * x_sum_diff_sq))
+
+        # x_m = [np.linalg.norm(i) for i in x]
+        # x = np.c_[x, x_m]
+        # y_m = [np.linalg.norm(i) for i in y]
+        # y = np.c_[y, y_m]
+        # x_mean = np.mean(x, axis = 0)
+        # y_mean = np.mean(y, axis = 0)
+
+        y_intercept = y_mean + abs(slopes * x_mean)
+        x_intercept = - y_intercept / slopes
+
+        return slopes, sigmas, y_intercept, x_intercept
+
+    def slope(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        return -np.fabs(slopes)
+
+    def sigma(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        return sigmas
+
+    def y_intercept(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        return y_intercept
+
+    def x_intercept(self, t_min=20, t_max=700, **options):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        return x_intercept
+
+    def N(self, t_min=20, t_max=700, debug=False, **options):
+        idx = 0
+        xy = np.array([[i[idx], j[idx]] for i in self.th for j in self.ptrm
+                       if i[0] == j[0]
+                       if i[0] >= t_min if i[0] <= t_max
+                       if j[0] >= t_min if j[0] <= t_max])
+        out = len(xy)
+        return out
+
+    def x_dash(self, t_min=20, t_max=700, **options):
+        # todo comments
+        '''
+        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are used to
+        calculate the NRM fraction and the length of the best-ﬁt line among other parameters. There are
+        multiple ways of calculating :math:`x_0 and :math:`y_0`, below is one example.
+
+        ..math:
+
+          x_i' = \frac{1}{2} \left( x_i + \frac{y_i - Y_{int}}{b}
+
+        '''
+
+        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+
+        x_m = [np.linalg.norm(i) for i in x]
+        x = np.c_[x, x_m]
+
+        y_m = [np.linalg.norm(i) for i in y]
+        y = np.c_[y, y_m]
+
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+
+        x_dash = 0.5 * (x + ((y - y_intercept) / slopes))
+        return x_dash
+
+    def y_dash(self, t_min=20, t_max=700, **options):
+        # todo comments
+        '''
+        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are used to
+        calculate the NRM fraction and the length of the best-ﬁt line among other parameters. There are
+        multiple ways of calculating :math:`x_0 and :math:`y_0`, below is one example.
+
+        ..math:
+
+          x_i' = \frac{1}{2} \left( x_i + \frac{y_i - Y_{int}}{b}
+
+        '''
+        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+
+        x_m = [np.linalg.norm(i) for i in x]
+        x = np.c_[x, x_m]
+
+        y_m = [np.linalg.norm(i) for i in y]
+        y = np.c_[y, y_m]
+
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+
+        y_dash = 0.5 * ( y + slopes * x + y_intercept)
+
+        return y_dash
+
+    def delta_x_dash(self, t_min=20, t_max=700, **options):
+        '''
+        ∆x0 and ∆y0 are TRM and NRM lengths of the best-ﬁt line on the Arai plot, respectively (Figure 1).
+        '''
+        x_dash = self.x_dash(t_min=t_min, t_max=t_max)
+        out = abs(np.max(x_dash, axis=0) - np.min(x_dash, axis=0))
+        return out
+
+    def delta_y_dash(self, t_min=20, t_max=700, **options):
+        '''
+        ∆x0 and ∆y0 are TRM and NRM lengths of the best-ﬁt line on the Arai plot, respectively (Figure 1).
+        '''
+        y_dash = self.y_dash(t_min=t_min, t_max=t_max)
+        out = abs(np.max(y_dash, axis=0) - np.min(y_dash, axis=0))
+        return out
+
+    def scatter(self, t_min=20, t_max=700, **options):
+        # todo change to new xyzm version
+        '''
+        The “scatter” parameter :math:´beta´: the standard error of the slope σ (assuming uncertainty in both the pTRM and NRM
+        data) over the absolute value of the best-fit slope |b| (Coe et al. 1978).
+
+        :param quantity:
+        :param t_min:
+        :param t_max:
+        '''
+        self.log.debug('CALCULATING\t scatter parameter')
+        if t_min != 20 or t_max != 700:
+            slope, sigma, intercept = self.calculate_slope(component=component, t_min=t_min, t_max=t_max)
+        else:
+            slope, sigma, intercept = self.slope, self.sigma, self.intercept
+        scatter = sigma / abs(slope)
+        return scatter
+
+    def f(self, component='m', t_min=20, t_max=700, **options):
+        """
+        :Parameters:
+
+        :Returns:
+
+        The remanence fraction, f, was defined by Coe et al. (1978) as:
+
+        .. math::
+
+           f =  \\frac{\\Delta y^T}{y_0}
+
+        where :math:`\Delta y^T` is the length of the NRM/TRM segment used in the slope calculation.
+        """
+        self.log.debug('CALCULATING\t f parameter')
+        delta_y_dash = self.delta_y_dash(t_min=t_min, t_max=t_max)
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        f = delta_y_dash / abs(y_intercept)
+        return f
+
+    def f_VDS(self, component='m', t_min=20, t_max=700, **options):
+        delta_y = self.delta_y_dash(t_min=t_min, t_max=t_max)
+        VDS = self.VDS(t_min=t_min, t_max=t_max)
+        out = delta_y / self.VDS(t_min=t_min, t_max=t_max)
+        return out
+
+    def VDS(self, t_min=20, t_max=700, **options):
+        """
+        An equal area projection may be the most useful way to present demagnetization data from a specimen with several
+        strongly overlapping remanence components. In order to represent the vector nature of paleomagnetic data, it is
+        necessary to plot intensity information. Intensity can be plotted versus demagnetization step in an intensity
+        decay curve. However, if there are several components with different directions, the intensity
+        decay curve cannot be used to determine, say, the blocking temperature spectrum or mdf, because it is the vector
+        sum of the two components. It is therefore advantageous to consider the decay curve of the vector difference
+        sum (VDS) of Gee et al. (1993). The VDS “straightens out” the various components by summing up the vector
+        differences at each demagnetization step, so the total magnetization is plotted, as opposed to the resultant.
+
+        :return: float
+        """
+        NRM_max = np.linalg.norm(self.th[-1][1:4])
+        NRM_sum = np.sum(self.VD(t_min=t_min, t_max=t_max))
+        out = NRM_max + NRM_sum
+
+        return out
+
+    def VD(self, t_min=20, t_max=700, **options):
+        NRM_diff = [np.linalg.norm(self.th[i + 1][1:4] - self.th[i][1:4])
+                    for i in range(0, len(self.th) - 1)
+                    if self.th[i][0] >= t_min
+                    if self.th[i + 1][0] <= t_max]
+        return NRM_diff
+
+    def FRAC(self, t_min=20, t_max=700, **options):
+        '''
+        NRM fraction used for the best-fit on an Arai diagram determined entirely by vector difference sum calculation (Shaar and Tauxe, 2013).
+        '''
+        NRM_sum = np.sum(np.fabs(self.VD(t_min=t_min, t_max=t_max)))
+        out = NRM_sum / self.VDS(t_min=t_min, t_max=t_max)
+        return out
+
+    def beta(self, t_min=20, t_max=700):
+        '''
+        :param component: str
+           magnetic component (x,y,z,m)
+        :param t_min: float
+           min temperature for slope calculation
+        :param t_max: float
+           max temperature for slope calculation
+
+        :math`\beta` is a measure of the relative data scatter around the best-fit line and is the ratio of the
+        standard error of the slope to the absolute value of the slope (Coe et al., 1978)
+
+        .. math:
+
+           \beta = \frac{\sigma_b}{|b|}
+
+        '''
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        out = sigmas / abs(slopes)
+
+        return out
+
+    def g(self, t_min=20, t_max=700):
+        """
+        Gap factor: A measure of the gap between the points in the chosen segment of the Arai plot and the least-squares
+        line. ‘g’ approaches (n-2)/(n-1) (close to unity) as the points are evenly distributed.
+
+        :Parameters:
+           quantity : str [defaulf = 'M']
+              useful for calculations in Z-direction
+           t_min : int [default = 20]
+           t_max : int [default = 700]
+        :Return:
+           gap : float
+              returns gap-factor for chosen line segment
+        """
+        y_dash = self.y_dash(t_min=t_min, t_max=t_max)
+        delta_y_dash = self.delta_y_dash(t_min=t_min, t_max=t_max)
+        y_dash_diff = [(y_dash[i + 1] - y_dash[i]) ** 2 for i in range(len(y_dash) - 1)]
+        y_sum_dash_diff_sq = np.sum(y_dash_diff, axis=0)
+
+        out = 1 - y_sum_dash_diff_sq / delta_y_dash ** 2
+
+        # todo check if calculation wrong do to rounding error g=0.883487222
+        return out
+
+    def q(self, t_min=20, t_max=700):
+        self.log.debug('CALCULATING\t quality parameter')
+
+        beta = self.beta(t_min=t_min, t_max=t_max)
+        f = self.f(t_min=t_min, t_max=t_max)
+        gap = self.g(t_min=t_min, t_max=t_max)
+
+        quality = (f * gap) / beta
+        return quality
+
+    def gap_max(self, t_min=20, t_max=700):
+        vd = self.VD(t_min=t_min, t_max=t_max)
+        max_vd = np.max(vd)
+        sum_vd = np.sum(vd)
+        return max_vd / sum_vd
+
+    def w(self, t_min=20, t_max=700):
+        xy_data = np.array([[i, j] for i in self.th for j in self.ptrm
+                            if i[0] == j[0]
+                            if t_min <= i[0] <= t_max
+                            if t_min <= j[0] <= t_max])
+
+        y = xy_data[:, 0]
+        y = y[:, 1:5]
+
+        x = xy_data[:, 1]
+        x = np.fabs(x[:, 1:5])
+
+        ''' calculate averages '''
+
+        x_mean = np.mean(x, axis=0)
+        y_mean = np.mean(y, axis=0)
+
+        ''' calculate differences '''
+        x_diff = x - x_mean
+        y_diff = y - y_mean
+
+        ''' square differences '''
+        x_diff_sq = x_diff ** 2
+        y_diff_sq = y_diff ** 2
+
+        ''' sum squared differences '''
+        x_sum_diff_sq = np.sum(x_diff_sq, axis=0)
+        y_sum_diff_sq = np.sum(y_diff_sq, axis=0)
+
+        mixed_sum = np.sum(x_diff * y_diff, axis=0)
+
+        s = 2 + 2 * mixed_sum / np.sqrt(x_sum_diff_sq * y_sum_diff_sq)
+        s = np.sqrt(s)
+        out = self.f(t_min=t_min, t_max=t_max) * self.g(t_min=t_min, t_max=t_max) / s  # # calculation with s
+        out = self.q(t_min=t_min, t_max=t_max) / np.sqrt(self.N(t_min=t_min, t_max=t_max) - 2)
+        return out
+
+    def area(self, t_min=20, t_max=700):
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+
+        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+
+        x = np.c_[x, map(np.linalg.norm, x)]
+        y = np.c_[y, map(np.linalg.norm, y)]
+
+        y2 = y - ( x * slopes + y_intercept)
+
+        for i in range(len(y)):
+            print y[i][3], y2[i][3]
+
+        y = y - ( x * slopes + y_intercept)
+        area = scipy.integrate.simps(y, x=x, axis=0)
+        print area
+        plt.plot(x[:, 3], y[:, 3])
+        plt.show()
+
+
+    ''' NON STATISTIC FUNCTIONS '''
+
+    def __get_M(self, step='th'):
+        implemented = {'th': self.th,
+                       'pt': self.pt,
+                       'ck': self.ck,
+                       'ac': self.ac,
+                       'tr': self.tr,
+                       'ptrm': self.ptrm,
+                       'sum': self.sum}
+        OUT = [np.sqrt(i[1] ** 2 + i[2] ** 2 + i[3] ** 2) for i in implemented[step]]
+        return np.array(OUT, dtype=np.ndarray)
+
+    def __get_D(self, step='th'):
+        """
+        :Parameter:
+           step : str [default = 'th']
+                The paleomagnetic step
+        :Return:
+
+        """
+        from math import degrees
+
+        if step not in ['th', 'pt', 'ptrm', 'ac', 'ck', 'tr', 'sum']:
+            print 'No such step: %s' % step
+            return
+
+        implemented = {'th': self.th,
+                       'pt': self.pt,
+                       'ck': self.ck,
+                       'ac': self.ac,
+                       'tr': self.tr,
+                       'ptrm': self.ptrm,
+                       'sum': self.sum}
+
+        aux = [np.arctan2(i[2], i[1]) for i in implemented[step]]
+        D = map(degrees, aux)
+        D = np.array(D)
+
+        for i in range(len(D)):
+            if D[i] < 0:
+                D[i] += 360
+            if D[i] > 360:
+                D[i] -= 360
+        return D
+
+    def __get_I(self, step='th'):
+        """
+        Calculates the Inclination from a given step.
+
+        :Parameter:
+           step : str [default = 'th']
+                The paleomagnetic step
+        :Return:
+           I : inclination Data
+
+        Inclination is calculated with,
+
+        .. math::
+
+           I = \\tan^{-1} \\left( \\sqrt{\\frac{z}{x^2 + y^2} } \\right)
+        """
+        from math import degrees
+
+        implemented = {'th': self.th,
+                       'pt': self.pt,
+                       'ck': self.ck,
+                       'ac': self.ac,
+                       'tr': self.tr,
+                       'ptrm': self.ptrm,
+                       'sum': self.sum}
+
+        aux = [np.arctan2(i[3], np.sqrt(i[2] ** 2 + i[1] ** 2)) for i in implemented[step]]
+        I = map(degrees, aux)
+        I = np.array(I)
+
+        return I
+
+
+    def export_tdt(self, folder=None, name='_output'):
+
+        """
+        NOT FINISHED
+        :param folder:
+        :param name:
+        """
+        if folder == None:
+            from os.path import expanduser
+
+            folder = expanduser("~") + '/Desktop/'
+
+        ADD = {'TH': 0, 'PT': 0.1, 'CK': 0.2, 'TR': 0.3, 'AC': 0.4, 'NRM': 0}
+        output = csv.writer(open(str(folder) + '%s' % self.sample.name + name + '.tdt', 'wb'), delimiter='\t')
+
+        for i in range(len(self.raw_data['time'])):
+            if not self.raw_data['type'][i] in ['TRM']:
+                sample_t = self.raw_data['step'][i] + ADD[self.raw_data['type'][i]]
+                sample_m = self.raw_data['m'][i] / self.sample.volume(length_unit='m')
+                sample_d = self.raw_data['dc'][i]
+                sample_i = self.raw_data['ic'][i]
+                out = [self.sample.name, sample_t, sample_m, sample_d, sample_i]
+                output.writerow(out)
+
+    def print_table(self, type='th', **options):
+        if type in ['th', 'sum', 'ptrm', 'pt', 'ck', 'ac', 'tr']:
+            for i in getattr(self, type):
+                print i[0], '\t', i[1], '\t', i[2], '\t', i[3]
+
+    def plot(self, component='m'):
+        Dunlop(self, component=component)
 
 
 class Zfc_Fc(Measurement):

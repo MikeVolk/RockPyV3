@@ -86,11 +86,18 @@ class SampleGroup():
             std.append(measurement_std)
         return np.array(ave), np.array(std)
 
+
     def plot(self, mtype, norm='mass', value=None, rtn='show'):
         if mtype == 'hys':
             OUT = RPplt.Hys(samples=self.samples, norm=norm, value=value, rtn=rtn).show()
             return OUT
 
+
+# class TT_Group(SampleGroup):
+#
+# def average_intensity(self):
+# for sample in self.samples:
+#             p0 =
 
 class Sample():
     general.create_logger('RockPy.SAMPLE')
@@ -168,13 +175,14 @@ class Sample():
     def add_measurement(self, mtype, mfile, machine, mag_method=None):
         implemented = {'af-demag': measurements.Af_Demag,
                        'hys': measurements.Hysteresis,
-                       'palint': measurements.PalInt,
+                       'palint': measurements.Thellier,
+                       'thellier': measurements.Thellier,
                        'zfc': measurements.Zfc_Fc,
                        'irm': measurements.Irm,
                        'coe': measurements.Coe,
                        'visc': measurements.Viscosity,
         }
-        # todo coe
+
         if mtype.lower() in implemented:
             self.log.info(' ADDING\t << measurement >> %s' % mtype)
             measurement = implemented[mtype.lower()](self, mtype, mfile, machine, mag_method)
@@ -194,9 +202,15 @@ class Sample():
         OUT = self.height_m * convert.convert2('m', length_unit, 'length')
         return OUT
 
-    def diamter(self, length_unit='mm'):
+    def diameter(self, length_unit='mm'):
         OUT = self.diameter_m * convert.convert2('m', length_unit, 'length')
         return OUT
+
+
+    def volume(self, length_unit='mm'):
+        out = np.pi * (self.diameter(length_unit=length_unit) / 2) ** 2 * self.height(length_unit=length_unit)
+        return out
+
 
     def infos(self, mass_unit='mg', length_unit='mm', header=True):
         text = '%s\t ' % self.name
