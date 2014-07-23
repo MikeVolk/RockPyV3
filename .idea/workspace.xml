@@ -2,36 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e37426bd-71ce-4d69-a24b-13832d3a73b7" name="Default" comment="Included SPD conform definitions for TT measurement">
-      <change type="MOVED" beforePath="$PROJECT_DIR$/Plots/General.py" afterPath="$PROJECT_DIR$/Plots/general.py" />
       <change type="MOVED" beforePath="$PROJECT_DIR$/ReadIn/Machines.py" afterPath="$PROJECT_DIR$/ReadIn/machines.py" />
       <change type="MOVED" beforePath="$PROJECT_DIR$/Structure/Measurements.py" afterPath="$PROJECT_DIR$/Structure/measurements.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/doctrees/environment.pickle" afterPath="$PROJECT_DIR$/build/doctrees/environment.pickle" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/doctrees/measurements.doctree" afterPath="$PROJECT_DIR$/build/doctrees/measurements.doctree" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/objects.inv" afterPath="$PROJECT_DIR$/build/html/objects.inv" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/doctrees/structure.doctree" afterPath="$PROJECT_DIR$/build/doctrees/structure.doctree" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/RPV3.log" afterPath="$PROJECT_DIR$/RPV3.log" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Structure/data.py" afterPath="$PROJECT_DIR$/Structure/data.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/genindex.html" afterPath="$PROJECT_DIR$/build/html/genindex.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/helper.py" afterPath="$PROJECT_DIR$/helper.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Plots/helper.py" afterPath="$PROJECT_DIR$/Plots/helper.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ReadIn/helper.py" afterPath="$PROJECT_DIR$/ReadIn/helper.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/_modules/Plots/hysteresis.html" afterPath="$PROJECT_DIR$/build/html/_modules/Plots/hysteresis.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/index.html" afterPath="$PROJECT_DIR$/build/html/index.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/_modules/index.html" afterPath="$PROJECT_DIR$/build/html/_modules/index.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/measurements.html" afterPath="$PROJECT_DIR$/build/html/measurements.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/_modules/Structure/measurements.html" afterPath="$PROJECT_DIR$/build/html/_modules/Structure/measurements.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/source/measurements.rst" afterPath="$PROJECT_DIR$/source/measurements.rst" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/_sources/measurements.txt" afterPath="$PROJECT_DIR$/build/html/_sources/measurements.txt" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Plots/paleointensity.py" afterPath="$PROJECT_DIR$/Plots/paleointensity.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/plots.html" afterPath="$PROJECT_DIR$/build/html/plots.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/py-modindex.html" afterPath="$PROJECT_DIR$/build/html/py-modindex.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/_modules/Structure/sample.html" afterPath="$PROJECT_DIR$/build/html/_modules/Structure/sample.html" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Structure/sample.py" afterPath="$PROJECT_DIR$/Structure/sample.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/search.html" afterPath="$PROJECT_DIR$/build/html/search.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/searchindex.js" afterPath="$PROJECT_DIR$/build/html/searchindex.js" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Paleointensity/statistics.py" afterPath="$PROJECT_DIR$/Paleointensity/statistics.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/structure.html" afterPath="$PROJECT_DIR$/build/html/structure.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/html/tutorial.html" afterPath="$PROJECT_DIR$/build/html/tutorial.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <list id="ceb68396-0786-4fa5-8b76-ee5db19ef7ab" name="Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
     <list id="1cf93eae-3449-4d65-a663-b8e06095295a" name="Failed commit: Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
@@ -60,22 +34,14 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="measurements.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="measurements.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Structure/measurements.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="450" max-vertical-offset="23655">
-              <caret line="748" column="30" selection-start-line="748" selection-start-column="30" selection-end-line="748" selection-end-column="30" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="helper.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/ReadIn/helper.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.78109455" vertical-offset="519" max-vertical-offset="1305">
-              <caret line="69" column="53" selection-start-line="69" selection-start-column="53" selection-end-line="69" selection-end-column="53" />
-              <folding />
+            <state vertical-scroll-proportion="0.5084746" vertical-offset="450" max-vertical-offset="23655">
+              <caret line="50" column="23" selection-start-line="50" selection-start-column="23" selection-end-line="50" selection-end-column="23" />
+              <folding>
+                <element signature="e#35#73#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -191,21 +157,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="Structure" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="RockPy V3" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="RockPyV3" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Plots" />
+              <option name="myItemId" value="ReadIn" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -223,6 +175,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="FullScreen" value="false" />
     <property name="recentsLimit" value="5" />
+    <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file:///Users/mike/Google Drive/__code/RockPyV3/Structure/measurements.py" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
@@ -620,7 +573,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -628,7 +583,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -671,7 +628,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -700,7 +659,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -729,7 +690,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -786,13 +749,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-0.005291005" vertical-offset="3" max-vertical-offset="1035">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/ReadIn/machines.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.025423728" vertical-offset="0" max-vertical-offset="2850">
-          <caret line="1" column="19" selection-start-line="1" selection-start-column="19" selection-end-line="1" selection-end-column="19" />
         </state>
       </provider>
     </entry>
@@ -947,19 +903,29 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Structure/measurements.py">
+    <entry file="file://$PROJECT_DIR$/ReadIn/machines.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="450" max-vertical-offset="22830">
-          <caret line="748" column="30" selection-start-line="748" selection-start-column="30" selection-end-line="748" selection-end-column="30" />
+        <state vertical-scroll-proportion="0.025423728" vertical-offset="0" max-vertical-offset="3270">
+          <caret line="1" column="19" selection-start-line="1" selection-start-column="19" selection-end-line="1" selection-end-column="19" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ReadIn/helper.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.78109455" vertical-offset="519" max-vertical-offset="1305">
+        <state vertical-scroll-proportion="0.7562189" vertical-offset="534" max-vertical-offset="1305">
           <caret line="69" column="53" selection-start-line="69" selection-start-column="53" selection-end-line="69" selection-end-column="53" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Structure/measurements.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.5084746" vertical-offset="450" max-vertical-offset="23655">
+          <caret line="50" column="23" selection-start-line="50" selection-start-column="23" selection-end-line="50" selection-end-column="23" />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

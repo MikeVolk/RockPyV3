@@ -991,7 +991,7 @@ class Thellier(Measurement):
         # xy_data = np.array([[i, j] for i in self.th for j in self.ptrm
         # if i[0] == j[0]
         # if t_min <= i[0] <= t_max
-        #        if t_min <= j[0] <= t_max])
+        # if t_min <= j[0] <= t_max])
         #
         # y = xy_data[:,0]
         # y = y[:,1:4]

@@ -206,7 +206,7 @@ def mpms(files, sample=None):
                   # Trans Algorithm,Trans Reg Fit,Trans Reg Factor,Long Moment [w/o ABS] (emu),Long Scan Std Dev [w/o ABS],Long Offset [w/o ABS] (cm),
                   # Long Offset Std Dev [w/o ABS],Long Reg Fit [w/o ABS],Trans Moment [w/o ABS] (emu),Trans Scan Std Dev [w/o ABS],Trans Offset [w/o ABS] (cm),
                   # Trans Offset Std Dev [w/o ABS],Trans Reg Fit [w/o ABS],RSO Position (deg),Amplitude (cm),Frequency,Cycles to Average,Scans per Measurement,
-                  'Delta Temp (K)': [34, float],  #Error,EC Comp. Running,Using ABS,'}
+                  'Delta Temp (K)': [34, float],  # Error,EC Comp. Running,Using ABS,'}
         }
 
         aux = [i for i in reader_object][31:]

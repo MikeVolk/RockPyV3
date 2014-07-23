@@ -97,7 +97,7 @@ class SampleGroup():
 #
 # def average_intensity(self):
 # for sample in self.samples:
-#             p0 =
+# p0 =
 
 class Sample():
     general.create_logger('RockPy.SAMPLE')
