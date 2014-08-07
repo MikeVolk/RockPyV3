@@ -217,3 +217,8 @@ def mpms(files, sample=None):
     out = {key: [out[0][key], out[1][key]] for key in out[0]}
     out['time'] = [map(time.localtime, i) for i in out['time']]
     return out
+
+
+def simulation(files, sample=None):
+    out = []
+    return out

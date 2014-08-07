@@ -37,18 +37,19 @@ class Measurement(object):
             'irm': '',
             'coe': '',
             'visc': '',
+            'thellier': ''
         }
-
-        if mtype.lower() in implemented:
-            self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
-            self.mtype = mtype.lower()
-            self.machine = machine.lower()
-            self.mfile = mfile
-            self.sample = sample
-            self.import_data()
-        else:
-            self.log.error('UNKNOWN\t measurement type: << %s >>' % mtype)
-            return None
+        if mtype:
+            if mtype.lower() in implemented:
+                self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
+                self.mtype = mtype.lower()
+                self.machine = machine.lower()
+                self.mfile = mfile
+                self.sample = sample
+                self.import_data()
+            else:
+                self.log.error('UNKNOWN\t measurement type: << %s >>' % mtype)
+                return None
 
         self.treatment = None
 
@@ -61,10 +62,12 @@ class Measurement(object):
                                'visc': machines.vsm},
                        'cryo_nl': {'palint': machines.cryo_nl},
                        'mpms': {'zfc': machines.mpms,
-                                'fc': machines.mpms, }}
+                                'fc': machines.mpms, },
+                       'simulation': {'palint': machines.simulation,
+                       }}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
-
+        self.raw_data = None
         if self.machine in implemented:
             if self.mtype in implemented[self.machine]:
                 self.raw_data = implemented[self.machine][self.mtype](self.mfile, self.sample.name)
@@ -101,10 +104,7 @@ class Measurement(object):
         y = xy[:, 1]
 
         if x_new == None:
-            x_new = np.linspace(min(x), max(x), 50000)
-
-        # fc = interp1d(x, y, kind='cubic')
-        # y_new = fc(x_new)
+            x_new = np.linspace(min(x), max(x), 5000)
 
         fc = splrep(x, y, s=0)
         y_new = interpolate.splev(x_new, fc, der=0)
@@ -331,6 +331,8 @@ class Hysteresis(Measurement):
 
         self.mrs = self.calculate_mrs()
         self.ms = self.calculate_ms()
+
+
         # ## check for msi branch ###
         # ## msi is found, if the first virgin value is 0.9*mrs ###
 
@@ -465,36 +467,6 @@ class Hysteresis(Measurement):
         """
         pass
 
-
-    def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
-        Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, out=out, measurement=self).show(out=out,
-                                                                                                     folder=folder,
-                                                                                                     name=name)
-
-
-    def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
-        factor = {'mass': self.sample.mass(),
-                  'max': max(self.down_field[:, 1])}
-        norm_factor = factor[norm]
-
-        if figure == None:
-            fig = plt.figure()
-        else:
-            fig = figure
-
-        ax = fig.add_subplot(111)
-
-        hysteresis.plot_hys(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
-
-        if self.virgin != None and virgin:
-            hysteresis.plot_virgin(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
-        if out == 'rtn':
-            return fig
-        if out == 'show':
-            plt.show()
-        if out == 'save':
-            if folder != None:
-                plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
     # # calculations ##
 
@@ -637,6 +609,75 @@ class Hysteresis(Measurement):
         pass
 
 
+    def paramag_slope_correction(self, percentage_of_field=80.):
+        p = percentage_of_field / 100
+        df_start = np.array([i for i in self.down_field if i[0] >= max(self.down_field[:, 0]) * p])  # 1
+        df_end = np.array([i for i in self.down_field if i[0] <= min(self.down_field[:, 0]) * p])  # 2
+        uf_start = np.array([i for i in self.up_field if i[0] >= max(self.up_field[:, 0]) * p])  # 3
+        uf_end = np.array([i for i in self.up_field if i[0] <= min(self.up_field[:, 0]) * p])  # 4
+
+        slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = stats.linregress(df_start[:, 0], df_start[:, 1])
+        slope_2, intercept_2, r_value_2, p_value_2, std_err_2 = stats.linregress(df_end[:, 0], df_end[:, 1])
+        slope_3, intercept_3, r_value_3, p_value_3, std_err_3 = stats.linregress(uf_start[:, 0], uf_start[:, 1])
+        slope_4, intercept_4, r_value_4, p_value_4, std_err_4 = stats.linregress(uf_end[:, 0], uf_end[:, 1])
+        self.log.info('PARAMAG-CORRECTION - CALCULATING: high field slope: << %.2e, %.2e, %.2e, %.2e >>' % (
+        slope_1, slope_2, slope_3, slope_4))
+        slope = np.mean([slope_1, slope_2, slope_3, slope_4])
+
+        self.down_field[:, 1] -= self.down_field[:, 0] * slope
+        self.up_field[:, 1] -= self.up_field[:, 0] * slope
+
+        if self.virgin:
+            self.virgin[:, 1] -= self.virgin[:, 0] * slope
+        if self.msi:
+            self.msi[:, 1] -= self.msi[:, 0] * slope
+
+        self.uf_interp = self.interpolate('up_field')
+        self.df_interp = self.interpolate('down_field')
+        self.down_field_interpolated = self.df_interp
+        self.up_field_interpolated = self.uf_interp
+
+        self.irr = np.array(
+            [[self.uf_interp[i, 0], (self.df_interp[i, 1] - self.uf_interp[i, 1]) / 2] for i in
+             range(len(self.uf_interp))])
+
+        self.rev = np.array(
+            [[self.uf_interp[i, 0], (self.df_interp[i, 1] + self.uf_interp[i, 1]) / 2] for i in
+             range(len(self.uf_interp))])
+
+        self.mrs = self.calculate_mrs()
+        self.ms = self.calculate_ms()
+
+    def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
+        Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
+                                                                                                      folder=folder,
+                                                                                                      name=name)
+
+    def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
+        factor = {'mass': self.sample.mass(),
+                  'max': max(self.down_field[:, 1])}
+        norm_factor = factor[norm]
+
+        if figure == None:
+            fig = plt.figure()
+        else:
+            fig = figure
+
+        ax = fig.add_subplot(111)
+
+        hysteresis.plot_hys(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
+
+        if self.virgin != None and virgin:
+            hysteresis.plot_virgin(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
+        if out == 'rtn':
+            return fig
+        if out == 'show':
+            plt.show()
+        if out == 'save':
+            if folder != None:
+                plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
+
+
 class Viscosity(Measurement):
     def __init__(self, sample, mtype, mfile, machine, mag_method):
         self.log = logging.getLogger('RockPy.MEASUREMENT.visc')
@@ -744,40 +785,45 @@ class Thellier(Measurement):
         self.correction = ''
         self.components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
 
-        self.holder = self.raw_data['acryl']
+        if mfile:
+            self.holder = self.raw_data['acryl']
 
-        self.nrm = helper.get_type(self.raw_data, 'NRM')
-        self.trm = helper.get_type(self.raw_data, 'TRM')
+            self.nrm = helper.get_type(self.raw_data, 'NRM')
+            self.trm = helper.get_type(self.raw_data, 'TRM')
 
-        # get_type gives - T, x, y, z, m
-        self.th = helper.get_type(self.raw_data, 'TH')
+            # get_type gives - T, x, y, z, m
+            self.th = helper.get_type(self.raw_data, 'TH')
 
-        types = list(set(self.raw_data['type']))
+            types = list(set(self.raw_data['type']))
 
-        if self.nrm != None:
-            self.th = np.vstack((self.nrm, self.th))
+            if self.nrm != None:
+                self.th = np.vstack((self.nrm, self.th))
 
-        # check if trm if not replace with NRM for P0 steps
-        if not 'NRM' in types and not 'TRM' in types:
-            self.trm = np.array([self.th[0]])
-            self.nrm = np.array([self.th[0]])
+            # check if trm if not replace with NRM for P0 steps
+            if not 'NRM' in types and not 'TRM' in types:
+                self.trm = np.array([self.th[0]])
+                self.nrm = np.array([self.th[0]])
 
-        if self.trm == None:
-            self.trm = self.nrm
+            if self.trm == None:
+                self.trm = self.nrm
 
-        if self.nrm == None:
-            self.nrm = self.trm
+            if self.nrm == None:
+                self.nrm = self.trm
 
+            if self.trm[:, 0] == 0:
+                self.trm[:, 0] = 20
 
-        self.pt = np.vstack((self.th[0], helper.get_type(self.raw_data, 'PT')))
+            self.pt = np.vstack((self.th[0], helper.get_type(self.raw_data, 'PT')))
 
-        self.ck = helper.get_type(self.raw_data, 'CK')
-        self.ac = helper.get_type(self.raw_data, 'AC')
-        self.tr = helper.get_type(self.raw_data, 'TR')
+            self.temps = [i for i in self.th[:, 0] if i in self.pt[:, 0]]
 
-        self.ptrm = self.calculate_ptrm()
-        self.sum = self.calculate_sum()
-        self.difference = self.calculate_difference()
+            self.ck = helper.get_type(self.raw_data, 'CK')
+            self.ac = helper.get_type(self.raw_data, 'AC')
+            self.tr = helper.get_type(self.raw_data, 'TR')
+
+            self.ptrm = self.calculate_ptrm()
+            self.sum = self.calculate_sum()
+            self.difference = self.calculate_difference()
 
         self.lab_field = lab_field
 
@@ -802,7 +848,6 @@ class Thellier(Measurement):
                             if i[0] == j[0]
                             if t_min <= i[0] <= t_max
                             if t_min <= j[0] <= t_max])
-
         x = xy_data[:, 0]
         y = xy_data[:, 1]
         return x, y
@@ -819,7 +864,7 @@ class Thellier(Measurement):
         for ck in self.ck:
             th_j = [0, 0, 0, 0, 0]
             for th in self.th:
-                if ck[-1] > th[-1]:
+                if ck[-1] - th[-1] > 0:  # if the time diff >0 => ck past th step
                     if th_j[-1] < th[-1]:
                         th_j = th
                 if ck[0] == th[0]:
@@ -836,6 +881,9 @@ class Thellier(Measurement):
             d_ck = np.array([ck[0], d_ck[0], d_ck[1], d_ck[2], d_ck_m, ck[-1]])
 
             out.append([d_ck, th_i, ptrm_j, th_j])
+
+        for i in out:
+            print i[0][0], i[1][0], i[2][0], i[3][0]
         return out
 
     def _get_ac_data(self):
@@ -936,18 +984,51 @@ class Thellier(Measurement):
         self.log.info('CALCULATING\t DIFFERENCE')
         d = {'th': [], 'pt': [], 'nrm': [], 'trm': [], 'ac': [], 'tr': [], 'ck': []}
 
-        for i in ['th', 'pt', 'nrm', 'trm', 'ac', 'tr', 'ck']:
-            if getattr(self, i) == None:
-                self.log.debug('CANT FIND\t << %s >> in data structure' % (i))
-                continue
-            last_step = np.array([self.th[-1] * 0.95 for n in range(len(getattr(self, i)))])
-            aux = getattr(self, i)
-            d[i] = helper.claculate_difference(aux, last_step)
-        self.__dict__.update(d)
+        last_step = self.th[-1] * 0.95
+
+        self.th[:, 1:4] -= last_step[1:4]
+        th_m = [np.linalg.norm(i[1:4]) for i in self.th]
+        self.th[:, 4] = th_m
+
+        self.pt[:, 1:4] -= last_step[1:4]
+        pt_m = [np.linalg.norm(i[1:4]) for i in self.pt]
+        self.pt[:, 4] = pt_m
+
+        self.ck[:, 1:4] -= last_step[1:4]
+        ck_m = [np.linalg.norm(i[1:4]) for i in self.ck]
+        self.ck[:, 4] = ck_m
+
+        self.ac[:, 1:4] -= last_step[1:4]
+        ac_m = [np.linalg.norm(i[1:4]) for i in self.ac]
+        self.ac[:, 4] = ac_m
+
+        self.tr[:, 1:4] -= last_step[1:4]
+        tr_m = [np.linalg.norm(i[1:4]) for i in self.tr]
+        self.tr[:, 4] = tr_m
+
+        self.nrm[:, 1:4] -= last_step[1:4]
+        nrm_m = [np.linalg.norm(i[1:4]) for i in self.nrm]
+        self.nrm[:, 4] = nrm_m
+
+        self.trm[:, 1:4] -= last_step[1:4]
+        trm_m = [np.linalg.norm(i[1:4]) for i in self.trm]
+        self.trm[:, 4] = trm_m
+
         self.sum = self.calculate_sum()
         self.ptrm = self.calculate_ptrm()
         self.differnence = self.calculate_difference()
 
+    def optimize(self, component='m'):
+        '''
+        finds combination of t_min and t_max that maximizes q/gap_max factor
+        '''
+        idx = self.components[component] - 1
+        opt = np.array(
+            [[i, j, self.q(t_min=i, t_max=j)[idx] / self.gap_max(t_min=i, t_max=j)] for i in self.temps for j in
+             self.temps if i < j])
+        opt_max = np.nanmax(opt[:, 2])
+        opt_max_idx = np.where(opt[:, 2] == opt_max)[0]
+        return opt[opt_max_idx]
 
     def intensity(self, t_min=20, t_max=700, **options):
         slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
@@ -1275,6 +1356,11 @@ class Thellier(Measurement):
         return quality
 
     def gap_max(self, t_min=20, t_max=700):
+        '''
+        1D
+        :return: float
+
+        '''
         vd = self.VD(t_min=t_min, t_max=t_max)
         max_vd = np.max(vd)
         sum_vd = np.sum(vd)
@@ -1319,23 +1405,56 @@ class Thellier(Measurement):
 
     def area(self, t_min=20, t_max=700):
         slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        print slopes
 
         y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
 
         x = np.c_[x, map(np.linalg.norm, x)]
         y = np.c_[y, map(np.linalg.norm, y)]
 
-        y2 = y - ( x * slopes + y_intercept)
+        y2 = np.fabs(y) - ( x * slopes + y_intercept)
+        # y2 = y
 
-        for i in range(len(y)):
-            print y[i][3], y2[i][3]
+        area = scipy.integrate.simps(y2, x=x, axis=0)
+        sum_distance = np.sum(y2, axis=0)
 
-        y = y - ( x * slopes + y_intercept)
-        area = scipy.integrate.simps(y, x=x, axis=0)
-        print area
-        plt.plot(x[:, 3], y[:, 3])
+        plt.plot(x[:, 0], y2[:, 0], label='x')
+        plt.plot(x[:, 1], y2[:, 1], label='y')
+        plt.plot(x[:, 2], y2[:, 2], label='z')
+        plt.plot(x[:, 3], y2[:, 3], label='m')
+        plt.axhline(color='k')
+        plt.legend(loc='best')
         plt.show()
 
+    def print_statistics_table(self, component='m', t_min=20, t_max=700, lab_field=35, header=True):
+        idx = self.components[component] - 1
+        slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
+        f = self.f(t_min=t_min, t_max=t_max)
+        f_VDS = self.f_VDS(t_min=t_min, t_max=t_max)
+        VDS = self.VDS(t_min=t_min, t_max=t_max)
+        FRAC = self.FRAC(t_min=t_min, t_max=t_max)
+        beta = self.beta(t_min=t_min, t_max=t_max)
+        g = self.g(t_min=t_min, t_max=t_max)
+        q = self.q(t_min=t_min, t_max=t_max)
+        gap_max = self.gap_max(t_min=t_min, t_max=t_max)
+        w = self.w(t_min=t_min, t_max=t_max)
+
+        out_header = '%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s' % (
+        'intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC', 'beta', 'g',
+        'q', 'gap_max', 'w')
+
+        # data = [slopes*lab_field, sigmas*lab_field, slopes, sigmas, y_intercept, x_intercept, f,f_VDS, VDS, FRAC, beta, g, q, gap_max, w]
+        data = [-slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
+                x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx]]
+
+        out = '%.2f\t %.2f\t %.2f\t %.2f\t %.3e\t %.3e\t %.2f\t %.2f\t %.3e\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f' % (
+            -slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
+            x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx])
+
+        if header:
+            print out_header
+        print out
+        return data
 
     ''' NON STATISTIC FUNCTIONS '''
 
@@ -1445,7 +1564,7 @@ class Thellier(Measurement):
             for i in getattr(self, type):
                 print i[0], '\t', i[1], '\t', i[2], '\t', i[3]
 
-    def plot(self, component='m'):
+    def dunlop(self, component='m'):
         Dunlop(self, component=component)
 
 

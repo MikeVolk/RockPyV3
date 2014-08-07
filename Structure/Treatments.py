@@ -28,6 +28,7 @@ class Pressure(Treatment):
         p_seen = options.get('p_seen', 0)
         self.p_max = p_max
         self.p_seen = p_seen
+        self.label = self.get_label()
 
     def get_label(self):
         label = 'P' + str(self.p_seen) + '|' + str(self.p_max)

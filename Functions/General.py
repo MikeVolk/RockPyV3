@@ -1,6 +1,10 @@
 __author__ = 'Mike'
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
+from math import degrees, radians
+from math import sin, cos, tan
+
 
 def create_logger(name):
     log = logging.getLogger(name=name)
@@ -8,6 +12,7 @@ def create_logger(name):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh = logging.FileHandler('RPV3.log')
     fh.setFormatter(formatter)
+    # ch = logging.FileHandler('RPV3.log')
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(formatter)
@@ -16,8 +21,8 @@ def create_logger(name):
 
     return ch, fh
 
-def differentiate(data_list, diff = 1, smoothing =1, norm = False, check = False):
 
+def differentiate(data_list, diff=1, smoothing=1, norm=False, check=False):
     """
     caclulates a smoothed (if smoothing > 1) derivative of the data
 
@@ -30,7 +35,7 @@ def differentiate(data_list, diff = 1, smoothing =1, norm = False, check = False
     :return:
     """
     log = logging.getLogger('RockPy.FUNCTIONS.general.differentiate')
-    log.info('DIFFERENTIATING\t data << %i derivative - smoothing: %i >>' %(diff, smoothing))
+    log.info('DIFFERENTIATING\t data << %i derivative - smoothing: %i >>' % (diff, smoothing))
     data_list = np.array(data_list)
     # getting X, Y data
     X = data_list[:, 0]
@@ -42,22 +47,59 @@ def differentiate(data_list, diff = 1, smoothing =1, norm = False, check = False
     # Y2 = 3*X**2
     # Y3 = 6*X
 
-    ## derivative
+    # # derivative
     for i in range(diff):
-        deri = [[X[i], (Y[i + smoothing] - Y[i - smoothing]) / (X[i + smoothing] - X[i - smoothing])] for i in range(smoothing, len(Y) - smoothing)]
+        deri = [[X[i], (Y[i + smoothing] - Y[i - smoothing]) / (X[i + smoothing] - X[i - smoothing])] for i in
+                range(smoothing, len(Y) - smoothing)]
         deri = np.array(deri)
-        X = deri[:,0]
-        Y = deri[:,1]
-    MAX = max(abs(deri[:,1]))
+        X = deri[:, 0]
+        Y = deri[:, 1]
+    MAX = max(abs(deri[:, 1]))
 
     if norm:
-        deri[:,1] /= MAX
+        deri[:, 1] /= MAX
     if check:
         if norm:
             plt.plot(data_list[:, 0], data_list[:, 1] / max(data_list[:, 1]))
         if not norm:
             plt.plot(data_list[:, 0], data_list[:, 1])
-        plt.plot(deri[:,0], deri[:,1])
+        plt.plot(deri[:, 0], deri[:, 1])
         plt.show()
 
     return deri
+
+
+def rotate(xyz, axis='x', degree=0, *args):
+    """
+
+
+    :rtype : object
+    :param x:
+    :param y:
+    :param z:
+    :param axis:
+    :param degree:
+    :return:
+    """
+    a = radians(degree)
+
+    RX = [[1, 0, 0],
+          [0, cos(a), -sin(a)],
+          [0, sin(a), cos(a)]]
+
+    RY = [[cos(a), 0, sin(a)],
+          [0, 1, 0],
+          [-sin(a), 0, cos(a)]]
+
+    RZ = [[cos(a), -sin(a), 0],
+          [sin(a), cos(a), 0],
+          [0, 0, 1]]
+
+    if axis.lower() == 'x':
+        out = np.dot(xyz, RX)
+    if axis.lower() == 'y':
+        out = np.dot(xyz, RY)
+    if axis.lower() == 'z':
+        out = np.dot(xyz, RZ)
+
+    return out

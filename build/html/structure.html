@@ -90,6 +90,8 @@
                                 <ul>
                                     <li class="toctree-l2"><a class="reference internal" href="#sample-class">Sample
                                         Class</a></li>
+                                    <li class="toctree-l2"><a class="reference internal" href="#samplegroup-class">SampleGroup
+                                        Class</a></li>
                                 </ul>
                             </li>
                             <li class="toctree-l1"><a class="reference internal"
@@ -119,6 +121,8 @@
                             <li><a class="reference internal" href="#">Structure</a>
                                 <ul>
                                     <li><a class="reference internal" href="#sample-class">Sample Class</a></li>
+                                    <li><a class="reference internal" href="#samplegroup-class">SampleGroup Class</a>
+                                    </li>
                                 </ul>
                             </li>
                         </ul>
@@ -173,6 +177,277 @@
                     </h2>
 
                     <p>This is the main class. You will use it with every plot or analysis you want to do.</p>
+                    <dl class="class">
+                        <dt id="Structure.sample.Sample">
+                            <em class="property">class </em><tt class="descclassname">Structure.sample.</tt><tt
+                                class="descname">Sample</tt><big>(</big><em>name</em>, <em>mass=1.0</em>, <em>mass_unit=None</em>,
+                            <em>height=None</em>, <em>diameter=None</em>, <em>length_unit=None</em><big>)</big><a
+                                class="reference internal" href="_modules/Structure/sample.html#Sample"><span
+                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                            href="#Structure.sample.Sample"
+                                                                            title="Permalink to this definition">¶</a>
+                        </dt>
+                        <dd>
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.Experiment">
+                                    <tt class="descname">Experiment</tt><big>(</big><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.Experiment"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.Experiment"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.add_diameter">
+                                    <tt class="descname">add_diameter</tt><big>(</big><em>diameter</em>, <em>length_unit='mm'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.add_diameter"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.add_diameter"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd><p>Adds diameter in m to sample</p>
+                                    <table class="docutils field-list" frame="void" rules="none">
+                                        <col class="field-name"/>
+                                        <col class="field-body"/>
+                                        <tbody valign="top">
+                                        <tr class="field-odd field">
+                                            <th class="field-name">Parameters:</th>
+                                            <td class="field-body">
+                                                <ul class="first last simple">
+                                                    <li><strong>diameter</strong> &#8211; float</li>
+                                                    <li><strong>length_unit</strong> &#8211; str</li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <p>changes sample.diameter_m from its initial value to a new value.
+                                        Length unit should be given, if other than &#8216;mm&#8217;. See convert2 helper
+                                        function
+                                        #todo point to helper</p>
+                                </dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.add_height">
+                                    <tt class="descname">add_height</tt><big>(</big><em>height</em>, <em>length_unit='mm'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.add_height"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.add_height"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd><p>Adds height in m to sample</p>
+                                    <table class="docutils field-list" frame="void" rules="none">
+                                        <col class="field-name"/>
+                                        <col class="field-body"/>
+                                        <tbody valign="top">
+                                        <tr class="field-odd field">
+                                            <th class="field-name">Parameters:</th>
+                                            <td class="field-body">
+                                                <ul class="first last simple">
+                                                    <li><strong>height</strong> &#8211; float</li>
+                                                    <li><strong>length_unit</strong> &#8211; str</li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <p>changes sample.height_m from its initial value to a new value.
+                                        Length unit should be given, if other than &#8216;mm&#8217;. See convert2 helper
+                                        function
+                                        #todo point to helper</p>
+                                </dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.add_mass">
+                                    <tt class="descname">add_mass</tt><big>(</big><em>mass</em>, <em>mass_unit='mg'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.add_mass"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.add_mass"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd><p>Adds mass to the sample object</p>
+                                    <table class="docutils field-list" frame="void" rules="none">
+                                        <col class="field-name"/>
+                                        <col class="field-body"/>
+                                        <tbody valign="top">
+                                        <tr class="field-odd field">
+                                            <th class="field-name">Parameters:</th>
+                                            <td class="field-body">
+                                                <ul class="first last simple">
+                                                    <li><strong>mass</strong> &#8211; float</li>
+                                                    <li><strong>mass_unit</strong> &#8211; str</li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <p>changes sample.mass_kg from its initial value to a new value.
+                                        mass unit should be given, if other than &#8216;mg&#8217;. See convert2 helper
+                                        function
+                                        #todo point to helper</p>
+                                </dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.add_measurement">
+                                    <tt class="descname">add_measurement</tt><big>(</big><em>mtype</em>, <em>mfile</em>,
+                                    <em>machine</em>, <em>mag_method=None</em><big>)</big><a class="reference internal"
+                                                                                             href="_modules/Structure/sample.html#Sample.add_measurement"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.add_measurement"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd>
+                                    <table class="docutils field-list" frame="void" rules="none">
+                                        <col class="field-name"/>
+                                        <col class="field-body"/>
+                                        <tbody valign="top">
+                                        <tr class="field-odd field">
+                                            <th class="field-name">Parameters:</th>
+                                            <td class="field-body">
+                                                <ul class="first simple">
+                                                    <li><strong>mtype</strong> &#8211; str - the type of measurement
+                                                    </li>
+                                                    <li><strong>mfile</strong> &#8211; str - the measurement file</li>
+                                                    <li><strong>machine</strong> &#8211; str - the machine from which
+                                                        the file is output
+                                                    </li>
+                                                    <li><strong>mag_method</strong> &#8211; str - only used for af-demag
+                                                    </li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        <tr class="field-even field">
+                                            <th class="field-name">Returns:</th>
+                                            <td class="field-body"><p class="first">RockPyV3.measurement object</p>
+                                            </td>
+                                        </tr>
+                                        <tr class="field-odd field">
+                                            <th class="field-name">Mtypes:</th>
+                                            <td class="field-body"></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <ul class="simple">
+                                        <li>af-demagnetization - &#8216;af-demag&#8217;</li>
+                                        <li>hysteresis - &#8216;hys&#8217;</li>
+                                        <li>Thellier-Thellier - &#8216;thellier&#8217;</li>
+                                        <li>Zero Field Cooling- &#8216;zfc&#8217;</li>
+                                        <li>IRM acquisition - &#8216;irm&#8217;</li>
+                                        <li>Backfield - &#8216;coe&#8217;</li>
+                                        <li>Viscosity - &#8216;visc&#8217;</li>
+                                    </ul>
+                                </dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.diameter">
+                                    <tt class="descname">diameter</tt><big>(</big><em>length_unit='mm'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.diameter"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.diameter"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.find_measurement">
+                                    <tt class="descname">find_measurement</tt><big>(</big><em>mtype</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.find_measurement"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.find_measurement"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.height">
+                                    <tt class="descname">height</tt><big>(</big><em>length_unit='mm'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.height"><span class="viewcode-link">[source]</span></a><a
+                                        class="headerlink" href="#Structure.sample.Sample.height"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.infos">
+                                    <tt class="descname">infos</tt><big>(</big><em>mass_unit='mg'</em>, <em>length_unit='mm'</em>,
+                                    <em>header=True</em><big>)</big><a class="reference internal"
+                                                                       href="_modules/Structure/sample.html#Sample.infos"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.infos"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.mass">
+                                    <tt class="descname">mass</tt><big>(</big><em>mass_unit='mg'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.mass"><span class="viewcode-link">[source]</span></a><a
+                                        class="headerlink" href="#Structure.sample.Sample.mass"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd><p>Returns mass in specified mass unit
+                                    :param mass_unit: str - unit to be output
+                                    :return: float - mass in mass_unit</p>
+                                </dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.plot">
+                                    <tt class="descname">plot</tt><big>(</big><big>)</big><a class="reference internal"
+                                                                                             href="_modules/Structure/sample.html#Sample.plot"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#Structure.sample.Sample.plot"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="method">
+                                <dt id="Structure.sample.Sample.volume">
+                                    <tt class="descname">volume</tt><big>(</big><em>length_unit='mm'</em><big>)</big><a
+                                        class="reference internal"
+                                        href="_modules/Structure/sample.html#Sample.volume"><span class="viewcode-link">[source]</span></a><a
+                                        class="headerlink" href="#Structure.sample.Sample.volume"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                        </dd>
+                    </dl>
+
+                </div>
+                <div class="section" id="samplegroup-class">
+                    <h2>SampleGroup Class<a class="headerlink" href="#samplegroup-class"
+                                            title="Permalink to this headline">¶</a></h2>
+                    <dl class="class">
+                        <dt id="Structure.sample.SampleGroup">
+                            <em class="property">class </em><tt class="descclassname">Structure.sample.</tt><tt
+                                class="descname">SampleGroup</tt><big>(</big><em>sample_dict=None</em>, <em>sample_list=None</em>,
+                            <em>name=''</em>, <em>log=None</em><big>)</big><a class="reference internal"
+                                                                              href="_modules/Structure/sample.html#SampleGroup"><span
+                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                            href="#Structure.sample.SampleGroup"
+                                                                            title="Permalink to this definition">¶</a>
+                        </dt>
+                        <dd></dd>
+                    </dl>
+
                 </div>
             </div>
 
