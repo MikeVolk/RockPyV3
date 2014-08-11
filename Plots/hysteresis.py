@@ -33,6 +33,15 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
     ax.plot(hys_obj.down_field[:, 0], hys_obj.down_field[:, 1] / norm_factor,
             color=std.get_color())
 
+    if hys_obj.paramag_corrected:
+        ax.text(1, 1, 'paramagnetic corrected: $\\chi_{p}=%.2e$' % (hys_obj.paramag_sus),
+                horizontalalignment='right',
+                verticalalignment='bottom',
+                # fontsize=8,
+                transform=ax.transAxes,
+
+        )
+
     if out == 'show':
         plt.show()
     if out == 'rtn':

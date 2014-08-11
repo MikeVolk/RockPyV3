@@ -64,7 +64,8 @@ class Measurement(object):
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, },
                        'simulation': {'palint': machines.simulation,
-                       }}
+                                      },
+                       'vftb': {'hys': machines.vftb}}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
         self.raw_data = None
@@ -280,39 +281,55 @@ class Hysteresis(Measurement):
 
 
         """
+
         self.log = logging.getLogger('RockPy.MEASUREMENT.HYSTERESIS')
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
-        self.info = self.raw_data[2]
-        self.calibration_factor = float(self.info['SETTINGS']['Calibration factor'])
+
+        if machine.lower() == 'vsm':
+            self.info = self.raw_data[2]
+            self.calibration_factor = float(self.info['SETTINGS']['Calibration factor'])
+            if adj:
+                self.fields = np.array([[j[2] for j in i] for i in self.raw_data[1]])
+                self.moments = np.array([[j[3] for j in i] for i in self.raw_data[1]])
+            else:
+                self.fields = np.array([[j[0] for j in i] for i in self.raw_data[1]])
+                self.moments = np.array([[j[1] for j in i] for i in self.raw_data[1]])
+
+        if machine.lower() == 'vftb':
+            self.info = {}
+            self.calibration_factor = 1
+            self.fields = self.raw_data.get('field')
+            self.moments = self.raw_data.get('moment')
 
         adj = self.info.get('adjusted', False)
 
-        if adj:
-            self.fields = np.array([[j[2] for j in i] for i in self.raw_data[1]])
-            self.moments = np.array([[j[3] for j in i] for i in self.raw_data[1]])
-        else:
-            self.fields = np.array([[j[0] for j in i] for i in self.raw_data[1]])
-            self.moments = np.array([[j[1] for j in i] for i in self.raw_data[1]])
-
-        # ## initialize
+        ### initialize
         self.virgin = None
         self.msi = None
         self.up_field = []
         self.down_field = []
 
-        for i in range(len(self.fields)):
-            if self.fields[i][0] > self.fields[i][-1]:
-                self.down_field = np.column_stack((self.fields[i], self.moments[i]))
-                self.log.debug('FOUND\t << down_field branch >> saved as measurement.down_field [field,moment]')
-            else:
-                if abs(self.fields[i][0]) < self.fields[i][len(self.fields[i]) / 2]:
-                    self.log.debug('FOUND\t << virgin branch >> saved as measurement.virgin [field,moment]')
-                    self.virgin = np.column_stack((self.fields[i], self.moments[i]))
+        if machine.lower()== 'vsm':
+            for i in range(len(self.fields)):
+                if self.fields[i][0] > self.fields[i][-1]:
+                    self.down_field = np.column_stack((self.fields[i], self.moments[i]))
+                    self.log.debug('FOUND\t << down_field branch >> stored as measurement.down_field [field,moment]')
                 else:
-                    self.log.debug('FOUND\t << up_field branch >> saved as measurement.up_field [field,moment]')
-                    self.up_field = np.column_stack((self.fields[i], self.moments[i]))[::-1]
+                    if abs(self.fields[i][0]) < self.fields[i][len(self.fields[i]) / 2]:
+                        self.log.debug('FOUND\t << virgin branch >> stored as measurement.virgin [field,moment]')
+                        self.virgin = np.column_stack((self.fields[i], self.moments[i]))
+                    else:
+                        self.log.debug('FOUND\t << up_field branch >> stored as measurement.up_field [field,moment]')
+                        self.up_field = np.column_stack((self.fields[i], self.moments[i]))[::-1]
 
-        self.log.debug('CALCULATING\t << irreversible >> saved as measurement.irrev [field,moment]')
+        if machine.lower()== 'vftb':
+            idx = np.where(np.diff(self.fields)<0)[0]
+            self.virgin = np.column_stack((self.fields[0:idx[0]+1], self.moments[0:idx[0]+1]))
+
+            self.down_field = np.column_stack((self.fields[idx[0]:idx[-1]+2], self.moments[idx[0]:idx[-1]+2]))
+            self.up_field = np.column_stack((self.fields[idx[-1]+1:], self.moments[idx[-1]+1:]))[::-1]
+
+        self.log.debug('CALCULATING\t << irreversible >> stored in measurement.irrev [field, moment]')
 
         # indices = [np.argmin(abs(i - self.down_field[:, 0])) for i in self.up_field[:, 0]]
 
@@ -348,6 +365,8 @@ class Hysteresis(Measurement):
 
             self.log.debug('MSI/MRS\t value: %.2f' % (self.mrs_msi))
 
+        ''' CORRECTIONS '''
+        self.paramag_corrected = False
     # # Energies ##
 
     def E_delta_t(self):
@@ -578,6 +597,7 @@ class Hysteresis(Measurement):
 
         self.log.info(
             'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (df_max, df_min, uf_max, uf_min, ms))
+
         if df_max / df_min >= 0.1 or df_min / df_max >= 0.1:
             print 'test'
         out = [ms, ms_sigm]
@@ -621,13 +641,13 @@ class Hysteresis(Measurement):
         slope_3, intercept_3, r_value_3, p_value_3, std_err_3 = stats.linregress(uf_start[:, 0], uf_start[:, 1])
         slope_4, intercept_4, r_value_4, p_value_4, std_err_4 = stats.linregress(uf_end[:, 0], uf_end[:, 1])
         self.log.info('PARAMAG-CORRECTION - CALCULATING: high field slope: << %.2e, %.2e, %.2e, %.2e >>' % (
-        slope_1, slope_2, slope_3, slope_4))
+            slope_1, slope_2, slope_3, slope_4))
         slope = np.mean([slope_1, slope_2, slope_3, slope_4])
 
         self.down_field[:, 1] -= self.down_field[:, 0] * slope
         self.up_field[:, 1] -= self.up_field[:, 0] * slope
 
-        if self.virgin:
+        if self.virgin != None:
             self.virgin[:, 1] -= self.virgin[:, 0] * slope
         if self.msi:
             self.msi[:, 1] -= self.msi[:, 0] * slope
@@ -647,6 +667,9 @@ class Hysteresis(Measurement):
 
         self.mrs = self.calculate_mrs()
         self.ms = self.calculate_ms()
+
+        self.paramag_sus = slope
+        self.paramag_corrected = True
 
     def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
         Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
@@ -783,7 +806,7 @@ class Thellier(Measurement):
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
 
         self.correction = ''
-        self.components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
+        self.components = {'temp':0, 'x': 1, 'y': 2, 'z': 3, 'm': 4, 'time':5}
 
         if mfile:
             self.holder = self.raw_data['acryl']
@@ -793,6 +816,12 @@ class Thellier(Measurement):
 
             # get_type gives - T, x, y, z, m
             self.th = helper.get_type(self.raw_data, 'TH')
+
+            ''' STDEVS for TH, PTRM, SUM '''
+            #initializing #todo reaad stdev from file
+            self.th_stdev = None
+            self.ptrm_stdev = None
+            self.sum_stdev = None
 
             types = list(set(self.raw_data['type']))
 
@@ -844,10 +873,26 @@ class Thellier(Measurement):
         :param t_max: float
         :return: ndarray
         """
-        xy_data = np.array([[i[1:4], j[1:4]] for i in self.th for j in self.ptrm
+        xy_data = np.array([[i[1:5], j[1:5]] for i in self.th for j in self.ptrm
                             if i[0] == j[0]
                             if t_min <= i[0] <= t_max
                             if t_min <= j[0] <= t_max])
+        x = xy_data[:, 0]
+        y = xy_data[:, 1]
+        return x, y
+    def _get_th_ptrm_stdev_data(self, t_min=20, t_max=700):
+        """
+        Returns th, ptrm data
+
+        :param t_min: float
+        :param t_max: float
+        :return: ndarray
+        """
+        xy_data = np.array([[i[1:5], j[1:5]] for i in self.th_stdev for j in self.ptrm_stdev
+                            if i[0] == j[0]
+                            if t_min <= i[0] <= t_max
+                            if t_min <= j[0] <= t_max])
+
         x = xy_data[:, 0]
         y = xy_data[:, 1]
         return x, y
@@ -882,8 +927,9 @@ class Thellier(Measurement):
 
             out.append([d_ck, th_i, ptrm_j, th_j])
 
-        for i in out:
-            print i[0][0], i[1][0], i[2][0], i[3][0]
+        # for i in out:
+        #     print i[0][0], i[1][0], i[2][0], i[3][0]
+        #     print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
     def _get_ac_data(self):
@@ -909,12 +955,15 @@ class Thellier(Measurement):
             for pt in self.pt:
                 if pt[0] == th_j[0]:
                     pt_i = pt
-                    # print ptrm
+
             d_ac = pt_i[1:4] - ac[1:4]
             d_ac_m = np.linalg.norm(d_ac)
             d_ac = np.array([ac[0], d_ac[0], d_ac[1], d_ac[2], d_ac_m, ac[-1]])
 
             out.append([d_ac, th_i, ptrm_j, th_j])
+        # for i in out:
+        #     print i[0][0], i[1][0], i[2][0], i[3][0]
+        #     print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
     def flip_ptrm(self):
@@ -1054,8 +1103,8 @@ class Thellier(Measurement):
                        if i[0] >= t_min if i[0] <= t_max
                        if j[0] >= t_min if j[0] <= t_max])
 
-        self.slope, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(xy[:, 0], xy[:, 1])
-        return self.slope, self.intercept, self.std_err, self.r_value, self.p_value
+        # self.slope, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(xy[:, 0], xy[:, 1])
+        # return self.slope, self.intercept, self.std_err, self.r_value, self.p_value
 
     def MAD(self, step='th'):
         step = step.lower()
@@ -1115,13 +1164,6 @@ class Thellier(Measurement):
         slopes = np.sqrt(y_sum_diff_sq / x_sum_diff_sq) * np.sign(mixed_sum)
 
         sigmas = np.sqrt((2 * y_sum_diff_sq - 2 * slopes * mixed_sum) / ( (N - 2) * x_sum_diff_sq))
-
-        # x_m = [np.linalg.norm(i) for i in x]
-        # x = np.c_[x, x_m]
-        # y_m = [np.linalg.norm(i) for i in y]
-        # y = np.c_[y, y_m]
-        # x_mean = np.mean(x, axis = 0)
-        # y_mean = np.mean(y, axis = 0)
 
         y_intercept = y_mean + abs(slopes * x_mean)
         x_intercept = - y_intercept / slopes
@@ -1405,7 +1447,7 @@ class Thellier(Measurement):
 
     def area(self, t_min=20, t_max=700):
         slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
-        print slopes
+        # print slopes
 
         y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
 
@@ -1440,8 +1482,9 @@ class Thellier(Measurement):
         w = self.w(t_min=t_min, t_max=t_max)
 
         out_header = '%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s' % (
-        'intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC', 'beta', 'g',
-        'q', 'gap_max', 'w')
+            'intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC', 'beta',
+            'g',
+            'q', 'gap_max', 'w')
 
         # data = [slopes*lab_field, sigmas*lab_field, slopes, sigmas, y_intercept, x_intercept, f,f_VDS, VDS, FRAC, beta, g, q, gap_max, w]
         data = [-slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
@@ -1533,6 +1576,38 @@ class Thellier(Measurement):
         I = np.array(I)
 
         return I
+
+    def fit_degree2(self, component='m'):
+        from scipy.optimize import fmin
+
+        idx = self.components[component]-1
+        slope = self.slope()[idx]
+        # parametric function, x is the independent variable
+        # and c are the parameters.
+        # it's a polynomial of degree 2
+        fp = lambda c, x: c[0] + slope * x + c[2] * x**2
+
+        # error function to minimize
+        e = lambda p, x, y: (abs((fp(p, x) - y))).sum()
+
+        y, x = self._get_th_ptrm_data()
+        y = y[:, idx]
+        mx = max(y)
+        x = x[:, idx]
+        x /= mx
+        y /= mx
+        # fitting the data with fmin
+        p0 = [y[0], self.slope()[idx], 0.3]  # initial parameter value
+        p = fmin(e, p0, args=(x, y))
+
+        print 'initial parameters: ', p0
+        print 'estimater parameters: ', p
+
+        xx = np.linspace(0, max(x), 100)
+        plt.plot(x, y, 'bo',
+             xx, fp(p, xx), 'r',
+        )
+        plt.show()
 
 
     def export_tdt(self, folder=None, name='_output'):

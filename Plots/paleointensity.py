@@ -13,7 +13,7 @@ def dunlop(palint_object, ax, component='m', norm_factor=1, plt_idx=0, out='show
     idx = components[component]
     colors = helper.get_colors()
     marker = helper.get_marker()
-    print palint_object.th[:, idx], norm_factor
+
     ax.plot(palint_object.th[:, 0], palint_object.th[:, idx] / norm_factor, '.-',
             marker=marker[plt_idx],
             color=colors[0], **plt_opt)
@@ -26,13 +26,8 @@ def dunlop(palint_object, ax, component='m', norm_factor=1, plt_idx=0, out='show
     ax.plot(palint_object.tr[:, 0], palint_object.tr[:, idx] / norm_factor,
             color='k', marker=marker[plt_idx], alpha=0.8, ls='')
 
-    # try:
-    # palint_object.th_stdev
     dunlop_std(palint_object=palint_object, ax=ax, component=component, norm_factor=norm_factor, plt_idx=plt_idx,
                plt_opt=plt_opt)
-    # except:
-    #     print 'no'
-    #     pass
     return ax
 
 
@@ -114,6 +109,19 @@ def arai(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_id
                        plt_opt=plt_opt)
     return ax
 
+def arai_stdev(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_idx=0, t_min=20, t_max=700,
+         line=True, check=True,
+         plt_opt={}, **options):
+
+    idx = palint_object.components[component]-1
+    markers = helper.get_marker()
+    colors = helper.get_colors()
+
+    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+    y_stdev, x_stdev = palint_object._get_th_ptrm_stdev_data(t_min=t_min, t_max=t_max)
+
+    ax.fill_between(x[:,idx], y[:,idx]+y_stdev[:,idx], y[:,idx]-y_stdev[:,idx], color=colors[plt_idx], alpha=0.2)
+    return ax
 
 def add_arai_temps(palint_object, ax, component='m', t_min=20, t_max=700, norm=None, norm_factor=[1, 1],
                    plt_idx=0,
@@ -174,13 +182,11 @@ def add_ac_check(palint_object, ax, component='m', norm=None,
     idx = palint_object.components[component]
 
     check_data = palint_object._get_ac_data()
-
     for i in check_data:
         ac_i = i[0][idx] / norm_factor[0]
-        th_i = i[1][idx] / norm_factor[0]
-        ptrm_j = i[2][idx] / norm_factor[1]
+        th_i = i[1][idx] / norm_factor[1]
+        ptrm_j = i[2][idx] / norm_factor[0]
         th_j = i[3][idx] / norm_factor[1]
-
         vline = lines.Line2D([ptrm_j, ptrm_j], [th_j, th_i], color=colors[plt_idx], ls='--', linewidth=1.2)
         hline = lines.Line2D([ac_i, ptrm_j], [th_i, th_i], color=colors[plt_idx], ls='--', linewidth=1.2)
         ax.add_line(hline)
@@ -194,7 +200,6 @@ def add_ck_check(palint_object, ax, component='m', norm=None,
                  **options):
     colors = helper.get_colors()
     idx = palint_object.components[component]
-
     check_data = palint_object._get_ck_data()
 
     for i in check_data:
@@ -202,7 +207,6 @@ def add_ck_check(palint_object, ax, component='m', norm=None,
         th_i = i[1][idx] / norm_factor[0]
         ptrm_j = i[2][idx] / norm_factor[1]
         th_j = i[3][idx] / norm_factor[1]
-
         hline = lines.Line2D([ck_i, ptrm_j], [th_j, th_j], color=colors[plt_idx], linewidth=1.2)
         vline = lines.Line2D([ck_i, ck_i], [th_j, th_i], color=colors[plt_idx], linewidth=1.2)
         ax.add_line(hline)

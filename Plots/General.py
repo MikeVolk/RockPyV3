@@ -65,7 +65,6 @@ class Plot(object):
         plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
 
     def out(self, *args):
-        print self.plot
         out_options = {'show': plt.show,
                        'rtn': self.get_fig,
                        'save': self.save_fig}
@@ -260,6 +259,9 @@ class IRM(Plot):
 
 
 class Dunlop(Plot):
+    # self, samples_list, norm='mass', log=None, value=None,
+    #              plot='show', folder=None, name='hysteresis',
+    #              plt_opt={}, **options)
     def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, plot='show', folder=None,
                  name='dunlop plot', **plt_opt):
 
@@ -275,34 +277,37 @@ class Dunlop(Plot):
 
         super(Dunlop, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
                                      name=name)
+        for sample_obj in self.samples:
+            if not measurement_test:
+                self.measurements = sample_obj.find_measurement('palint')
 
-        if not measurement_test:
-            self.measurements = sample_obj.find_measurement('palint')
+            for measurement in self.measurements:
+                components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
+                factors = {'mass': sample_obj.mass_kg,
+                           'max': measurement.sum[:, components[component]],
+                           'trm': measurement.trm[:, components[component]],
+                           'None': 1,
+                           }
 
-        for measurement in self.measurements:
-            components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
-            factors = {'mass': sample_obj.mass_kg,
-                       'max': measurement.sum[:, components[component]],
-                       'trm': measurement.trm[:, components[component]],
-                       'None': 1,
-            }
+                norm_factor = factors[norm]
 
-            norm_factor = factors[norm]
-            idx = self.measurements.index(
-                measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+                idx = self.measurements.index(measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+                if len(self.samples) >1:
+                    idx = self.samples.index(sample_obj)  # index of measurement used to distinguish samples
 
-            lines = ['-', '--', ':']
 
-            plt_opt.update({'linestyle': lines[idx]})
-            paleointensity.dunlop(palint_object=measurement, ax=self.ax,
-                                  plt_idx=idx,
-                                  norm_factor=norm_factor, component=component,
-                                  plt_opt=plt_opt)
+                lines = ['-', '--', ':']
 
-            paleointensity.add_dunlop_labels(palint_object=measurement, ax=self.ax,
-                                             norm=norm, norm_factor=norm_factor,
-                                             text=True, plt_idx=idx)
-            self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
+                plt_opt.update({'linestyle': lines[idx]})
+                paleointensity.dunlop(palint_object=measurement, ax=self.ax,
+                                      plt_idx=idx,
+                                      norm_factor=norm_factor, component=component,
+                                      plt_opt=plt_opt)
+
+                paleointensity.add_dunlop_labels(palint_object=measurement, ax=self.ax,
+                                                 norm=norm, norm_factor=norm_factor,
+                                                 text=True, plt_idx=idx)
+                self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
 
         self.out(plot, 'nolable')
 
@@ -315,42 +320,53 @@ class Arai(Plot):
                  **options):
         super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
                                    name=name)
-        self.measurements = sample_obj.find_measurement('palint')
-        self.t_min = t_min
-        self.t_max = t_max
 
-        for measurement in self.measurements:
-            components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
-            factors = {'mass': [sample_obj.mass_kg, sample_obj.mass_kg],
-                       'max': [max(measurement.sum[:, components[component]]),
-                               max(measurement.sum[:, components[component]])],
-                       'trm': [measurement.trm[:, components[component]][0],
-                               measurement.trm[:, components[component]][0]],
-                       'th': [measurement.th[0, components[component]], measurement.th[0, components[component]]],
-                       'dnorm': [measurement.ptrm[-1, components[component]], measurement.th[0, components[component]]],
-                       'none': [1, 1],
-                       None: [1, 1],
-            }
+        for sample_obj in self.samples:
+            self.measurements = sample_obj.find_measurement('palint')
+            self.t_min = t_min
+            self.t_max = t_max
+            for measurement in self.measurements:
+                components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
+                factors = {'mass': [sample_obj.mass_kg, sample_obj.mass_kg],
+                           'max': [max(measurement.sum[:, components[component]]),
+                                   max(measurement.sum[:, components[component]])],
+                           'trm': [measurement.trm[:, components[component]][0],
+                                   measurement.trm[:, components[component]][0]],
+                           'th': [measurement.th[0, components[component]], measurement.th[0, components[component]]],
+                           'dnorm': [measurement.ptrm[-1, components[component]], measurement.th[0, components[component]]],
+                           'none': [1, 1],
+                           }
 
-            norm_factor = factors[norm]
+                norm_factor = factors[norm.lower()]
 
-            idx = self.measurements.index(
-                measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+                idx = self.measurements.index(
+                    measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+                if len(self.samples) >1:
+                    idx = self.samples.index(sample_obj)  # index of measurement used to distinguish samples
 
-            lines = ['-', '--', ':']
 
-            if not 'ls' in plt_opt:
-                if not 'linestyle' in plt_opt:
-                    plt_opt.update({'linestyle': lines[idx]})
+                lines = ['-', '--', ':']
 
-            paleointensity.arai(palint_object=measurement, ax=self.ax,
-                                t_min=self.t_min, t_max=self.t_max,
-                                line=line, check=check,
-                                plt_idx=idx,
-                                norm_factor=norm_factor, component=component,
-                                plt_opt=plt_opt, **options)
+                if not 'ls' in plt_opt:
+                    if not 'linestyle' in plt_opt:
+                        plt_opt.update({'linestyle': lines[idx]})
 
-            self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
+                paleointensity.arai(palint_object=measurement, ax=self.ax,
+                                    t_min=self.t_min, t_max=self.t_max,
+                                    line=line, check=check,
+                                    plt_idx=idx,
+                                    norm_factor=norm_factor, component=component,
+                                    plt_opt=plt_opt, **options)
+
+                if measurement.th_stdev != None:
+                    paleointensity.arai_stdev(palint_object=measurement, ax=self.ax,
+                                    t_min=self.t_min, t_max=self.t_max,
+                                    plt_idx=idx,
+                                    norm_factor=norm_factor, component=component,
+                                    plt_opt=plt_opt, **options)
+
+
+                self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
 
         self.x_label = 'pTRM gained'
         self.y_label = 'NRM remaining'

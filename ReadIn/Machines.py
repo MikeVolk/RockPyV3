@@ -222,3 +222,20 @@ def mpms(files, sample=None):
 def simulation(files, sample=None):
     out = []
     return out
+
+
+def vftb(file, *args, **options):
+    '''
+    '''
+    log = logging.getLogger('RockPy.READIN.vftb')
+    log.info('IMPORTING\t VFTB file: << %s >>' % (file))
+    reader_object = open(file)
+    out = [i.strip('\r\n').split('\t') for i in reader_object.readlines()]
+    mass = float(out[0][1].split()[1])
+    out = np.array([map(float, i) for i in out[4:]])
+    header = {"field": [0, float],"moment": [1, float],"temp": [2, float],"time": [3, float],"std dev": [4, float],"suscep / emu / g / Oe": [5, float]}
+
+    out = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in out]) for column in
+               header}
+    out['moment'] *= mass /1E3
+    return out

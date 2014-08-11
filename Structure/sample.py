@@ -114,7 +114,9 @@ class TTGroup(SampleGroup):
 
     def get_data_mean(self, measurements, step='th'):
         data = self.get_data_with_temp(measurements=measurements, step=step)
-        out = np.mean(data, axis=0)
+        mdat = np.ma.masked_array(data,np.isnan(data)) # masking nan entries
+        mm = np.mean(mdat,axis=0)
+        out = mm.filled(np.nan)
         return out
 
     def get_data_max(self, measurements, step='th'):
@@ -128,7 +130,9 @@ class TTGroup(SampleGroup):
         '''
         data = self.get_data_with_temp(measurements=measurements, step=step)
         temps = self.get_temps(measurements=measurements, step=step)
-        out = np.std(data, axis=0, dtype='Float128')
+        mdat = np.ma.masked_array(data,np.isnan(data))
+        mm = np.std(mdat,axis=0)
+        out = mm.filled(np.nan)
         out[:, 0] = temps
         return out
 
@@ -152,13 +156,14 @@ class TTGroup(SampleGroup):
         '''
 
         temps = self.get_temps(measurements=measurements, step=step)
-        data = np.array([self.get_fill_nan(measurement, temps, step)[:, 0:5] for measurement in measurements])
+        data = np.array([self.get_fill_nan(measurement, temps, step)[:, 0:6] for measurement in measurements])
 
         norm_data = np.array([np.c_[1,
-                                    np.linalg.norm(getattr(measurement, 'trm')[:, 1:4]),
-                                    np.linalg.norm(getattr(measurement, 'trm')[:, 1:4]),
-                                    np.linalg.norm(getattr(measurement, 'trm')[:, 1:4]),
-                                    np.linalg.norm(getattr(measurement, 'trm')[:, 1:4]),
+                                    np.linalg.norm(getattr(measurement, norm)[:, 1:4]),
+                                    np.linalg.norm(getattr(measurement, norm)[:, 1:4]),
+                                    np.linalg.norm(getattr(measurement, norm)[:, 1:4]),
+                                    np.linalg.norm(getattr(measurement, norm)[:, 1:4]),
+                                    1
                               ]
                               for measurement in measurements])
 
@@ -230,8 +235,11 @@ class TTGroup(SampleGroup):
 
             TT_obj.th = self.get_data_mean(measurements=measurements_treat, step='th')
             TT_obj.ptrm = self.get_data_mean(measurements=measurements_treat, step='ptrm')
-            TT_obj.sum = np.c_[TT_obj.th[:, 0], TT_obj.th[:, 1:] + TT_obj.ptrm[:, 1:]]
-            TT_obj.pt = np.c_[TT_obj.th[:, 0], TT_obj.th[:, 1:] + TT_obj.ptrm[:, 1:]]
+
+            TT_obj.sum = np.c_[TT_obj.th[:, 0], (TT_obj.th[:, 1:] + TT_obj.ptrm[:, 1:])/TT_obj.trm[0,4]]
+
+            TT_obj.pt = self.get_data_mean(measurements=measurements_treat, step='pt')
+
             TT_obj.difference = np.c_[TT_obj.th[:, 0], TT_obj.th[:, 1:] - TT_obj.ptrm[:, 1:]]
 
             TT_obj.th_stdev = self.get_data_stdev(measurements=measurements_treat, step='th')
@@ -364,7 +372,8 @@ class Sample():
             self.log.debug('MISSING\t << diameter >>')
             self.diameter_m = None
 
-
+    def __repr__(self):
+        return '<< %s - Structure.sample.Sample >>' %self.name
     ''' ADD FUNCTIONS '''
 
     def add_mass(self, mass, mass_unit='mg'):
