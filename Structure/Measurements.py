@@ -4,6 +4,7 @@ from RockPyV3.Functions import general
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
 from RockPyV3.Plots.general import Hys_Fabian2003, Dunlop
+import RockPyV3.Plots.general as RPV3plots
 from RockPyV3.Plots import hysteresis, viscotity
 from RockPyV3.Paleointensity import statistics
 import treatments
@@ -30,6 +31,7 @@ class Measurement(object):
 
         implemented = {
             'af-demag': '',
+            'af': '',
             'parm-spectra': '',
             'hys': '',
             'palint': '',
@@ -56,6 +58,7 @@ class Measurement(object):
 
     def import_data(self):
         implemented = {'sushibar': {'af-demag': machines.sushibar,
+                                    'af': machines.sushibar,
                                     'parm-spectra': machines.sushibar},
                        'vsm': {'hys': machines.vsm,
                                'irm': machines.vsm,
@@ -121,12 +124,13 @@ class Measurement(object):
 
 
 class Af_Demag(Measurement):
-    general.create_logger('RockPy.MEASUREMENT.af-demag')
+    # general.create_logger('RockPy.MEASUREMENT.af-demag')
 
     def __init__(self, sample, mtype, mfile, machine, mag_method):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.af-demag')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        log = 'RockPy.MEASUREMENT.af-demag'
+        Measurement.__init__(self, sample, mtype, mfile, machine, log)
         self.mag_method = mag_method
+
         try:
             self.raw_data.pop('sample')
             self.__dict__.update(self.raw_data)
@@ -139,6 +143,8 @@ class Af_Demag(Measurement):
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
 
+    def plot(self):
+        RPV3plots.Af_Demag(self.sample)
 
 class pARM_spectra(Measurement):
     general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')

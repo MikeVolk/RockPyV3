@@ -470,14 +470,16 @@ class Sample():
 
         '''
 
-        implemented = {'af-demag': measurements.Af_Demag,
-                       'hys': measurements.Hysteresis,
-                       'palint': measurements.Thellier,
-                       'thellier': measurements.Thellier,
-                       'zfc': measurements.Zfc_Fc,
-                       'irm': measurements.Irm,
-                       'coe': measurements.Coe,
-                       'visc': measurements.Viscosity,
+        implemented = {
+            'af-demag': measurements.Af_Demag,
+            'af': measurements.Af_Demag,
+            'hys': measurements.Hysteresis,
+            'palint': measurements.Thellier,
+            'thellier': measurements.Thellier,
+            'zfc': measurements.Zfc_Fc,
+            'irm': measurements.Irm,
+            'coe': measurements.Coe,
+            'visc': measurements.Viscosity,
         }
 
         if mtype.lower() in implemented:

@@ -9,7 +9,7 @@ from pprint import pprint
 import logging
 
 
-def sushibar(file, sample=None):
+def sushibar_old(file, sample=None):
     log = logging.getLogger('RockPy.READIN')
     log.info('IMPORTING\t automag file: << %s >>' % (file))
     header = {
@@ -24,6 +24,7 @@ def sushibar(file, sample=None):
         'par5': [28, float], 'par6': [29, float], 'strat_level': [30, float], 'geoaz': [31, float],
         'hade': [32, float], 'dipdir': [33, float], 'dip': [34, float]
     }
+    # print [i for i in header if header[i][1]==float]
     reader_object = csv.reader(open(file, 'rU'), delimiter='\t')
     aux = [i for i in reader_object][1:]
     for i in range(len(aux)):
@@ -32,7 +33,7 @@ def sushibar(file, sample=None):
                 aux[i][j] = 0
 
     out = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in aux]) for column in header}
-    out['time'] = [time.strptime(i, "%y-%m-%d %H:%M:%S") for i in out['time']]
+    out['time'] = [time.strptime(i[:19], "%Y-%m-%d %H:%M:%S") for i in out['time']]
 
     if sample:
         samples = list(set(out['sample']))
@@ -47,6 +48,43 @@ def sushibar(file, sample=None):
                     out[key] = np.array([out[key][i] for i in sample_idx])
                     # print out
 
+    log.info(
+        'RETURNING\t %i data types with %i data points for sample: << %s >>' % (len(out), len(out['sample']), sample))
+    return out
+
+
+def sushibar(file, sample, *args, **options):
+    log = logging.getLogger('RockPy.READIN.sushibar')
+    log.info('IMPORTING\t automag file: << %s >>' % (file))
+
+    floats = ['dspin', 'ispin', 'par1', 'dip', 'dipdir', 'geoaz', 'm', 'strat_level', 'a95', 'par5', 'par4', 'par3', 'par2', 'sm', 'par6', 'dg', 'is', 'hade', 'dc', 'npos', 'bl diff/sample', 'y', 'x', 'ic', 'z', 'ds', 'ig']
+
+    data_f = open(file)
+    data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
+    header = ['sample', 'site', 'type', 'run', 'time', 'x', 'y', 'z', 'M', 'Dc', 'Ic', 'Dg', 'Ig', 'Ds', 'Is',
+              'a95', 'sM', 'npos', 'Dspin', 'Ispin', ' holder/sample', 'cup/sample', 'bl diff/sample', 'steps/rev',
+              'par1', 'par2', 'par3', 'par4', 'par5', 'par6', 'strat_level', 'geoaz', 'hade', 'dipdir', 'dip']
+
+    sample_data = np.array([i for i in data[2:-1] if i[0] == sample or sample in i[9]])
+
+    if len(sample_data) == 0:
+        log.error('UNKNOWN\t sample << %s >> can not be found in measurement file' % sample)
+        return None
+
+    out = {header[i].lower(): sample_data[:, i] for i in range(len(header))}
+
+    for i in floats:
+        try:
+            out[i] = map(float, out[i])
+        except ValueError:
+            continue
+
+    out['run'] = map(int, out['run'])
+
+    def time_conv(t):
+        return time.strptime(t[:19], "%Y-%m-%d %H:%M:%S")
+
+    out['time'] = map(time_conv, out['time'])
     log.info(
         'RETURNING\t %i data types with %i data points for sample: << %s >>' % (len(out), len(out['sample']), sample))
     return out

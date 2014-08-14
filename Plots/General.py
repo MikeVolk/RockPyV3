@@ -38,7 +38,7 @@ class Plot(object):
         if not log:
             self.log = logging.getLogger('RockPy.PLOTTING')
         else:
-            self.log = log
+            self.log = logging.getLogger(log)
 
         if type(samples_list) is not list:
             self.log.debug('CONVERTING Sample Instance to Samples List')
@@ -85,19 +85,35 @@ class Plot(object):
 
 
 class Af_Demag(Plot):
+
+    def __init__(self, samples_list, norm='mass', value=None,
+                 plot='show', folder=None, name='hysteresis',
+                 plt_opt={}, **options):
+        log = 'RockPy.PLOT.af-demag'
+        dtype = options.get('dtype', 'm')
+        super(Af_Demag, self).__init__(samples_list=samples_list,
+                                 norm=norm, log=log, value=value,
+                                 plot=plot, folder=folder, name=name,
+                                 **options)
+        try:
+            self.show(dtype=dtype)
+            self.out()
+        except AttributeError:
+            self.log.error('can\'t plot')
+
     def show(self, dtype='m'):
+        self.x_label = 'field'
+        self.y_label = 'moment'
         for sample in self.samples:
             for measurement in sample.find_measurement('af-demag'):
                 label = sample.name + measurement.mag_method
                 if measurement.treatment:
-                    label += '\t' + measurement.treatment.get_label()
+                    label += '  ' + measurement.treatment.get_label()
                 self.ax.plot(measurement.fields, getattr(measurement, dtype), label=label)
-
                 handles, labels = self.ax.get_legend_handles_labels()
 
-        self.ax.legend(handles, labels, prop={'size': 8})
-        plt.show()
-
+        self.ax.legend(handles, labels)
+        return self.ax
 
 class Hysteresis(Plot):
     log = general.create_logger('RockPy.PLOTTING.hysteresis')
