@@ -11,14 +11,14 @@ import matplotlib.pyplot as plt
 import csv
 
 
-class SampleGroup():
+class SampleGroup(object):
     general.create_logger('RockPy.SAMPLEGROUP')
 
     def __init__(self, sample_dict=None, sample_list=None, name='', log=None):
         if not log:
             self.log = logging.getLogger('RockPy.SAMPLEGROUP')
         else:
-            self.log = log
+            self.log = logging.getLogger(log)
 
         self.log.info('CREATING\t new sample group')
 
@@ -101,6 +101,7 @@ class SampleGroup():
         treatments = [measurement.treatment.label for sample in self.samples for measurement in sample.measurements if
                       measurement.mtype == mtype]
         out = sorted(list(set(treatments)))
+        self.log.info('FOUND\t %i treatments for << %s >>' % (len(out), mtype))
         return out
 
     def plot(self, mtype, norm='mass', value=None, rtn='show'):
@@ -110,7 +111,11 @@ class SampleGroup():
 
 
 class TTGroup(SampleGroup):
-    general.create_logger('RockPy.TT-SAMPLEGROUP')
+    # general.create_logger('RockPy.SAMPLEGROUP.thellier-thellier')
+    def __init__(self, sample_dict=None, sample_list=None, name=''):
+        log = 'RockPy.SAMPLEGROUP.thellier-thellier'
+        super(TTGroup, self).__init__(sample_dict=sample_dict, sample_list=sample_list, name=name, log=log)
+
 
     def get_data_mean(self, measurements, step='th'):
         data = self.get_data_with_temp(measurements=measurements, step=step)
@@ -221,6 +226,31 @@ class TTGroup(SampleGroup):
         if out == 'rtn':
             return
 
+    def get_statistics(self, component='m', t_min=20, t_max=700,
+                       out='print', folder=None, name='paleointensity_statistics.stats.csv',
+                       **options):
+        measurements = self.get_all_measurements(mtype='palint')
+        treatments = self.get_treatment_for_mtype(mtype='palint')
+
+        if folder == None:
+            from os.path import expanduser
+
+            folder = expanduser("~") + '/Desktop/'
+
+        out = ['sample', 'treatment']
+        out += measurements[0].print_statistics_table(component, t_min, t_max, header=False, csv_header=True)
+        for treat in treatments:  # getting measurements with the same treatments
+            measurements_treat = [i for i in measurements if i.treatment.label == treat]
+            for measurement in measurements_treat:
+                aux = [measurement.sample.name, measurement.treatment.label,
+                       measurement.print_statistics_table(component, t_min, t_max, header=False, csv=True)]
+                print aux
+                out.append(aux)
+
+        with open(folder + name, 'wb') as csvfile:
+            spamwriter = csv.writer(csvfile)
+            for i in out:
+                spamwriter.writerow(i)
 
     def get_sample_obj(self):
         sample_obj = Sample(name=self.name)
@@ -316,8 +346,8 @@ class TTGroup(SampleGroup):
 
 
 class Sample():
-    general.create_logger('RockPy.SAMPLE')
-
+    # general.create_logger('RockPy.SAMPLE')
+    # log = logging.getLogger('RockPy.SAMPLE')
     def __init__(self, name, mass=1.0, mass_unit=None, height=None, diameter=None, length_unit=None):
         """
 

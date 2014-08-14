@@ -112,6 +112,38 @@ def cryo_nl(file, sample=None):
     out['time'] = [time.strptime(i, "%y-%m-%d %H:%M:%S") for i in out['time']]
     log.info(
         'RETURNING\t %i data types with %i data points for sample: << %s >>' % (len(out), len(out['sample']), sample))
+
+    print(out.keys())
+    return out
+
+
+def cryo_nl2(file, sample, *args, **options):
+    log = logging.getLogger('RockPy.READIN.CRYO_NL')
+    log.info('IMPORTING\t cryomag file: << %s >>' % (file))
+
+    floats = ['x', 'y', 'z', 'm', 'sm', 'a95', 'dc', 'ic', 'dg', 'ig', 'ds', 'is']
+    data_f = open(file)
+    data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
+    header = ['name', 'coreaz', 'coredip', 'bedaz', 'beddip',
+              'vol', 'weight', 'step', 'type', 'comment',
+              'time', 'mode', 'x', 'y', 'z',
+              'M', 'sM', 'a95', 'Dc', 'Ic', 'Dg', 'Ig', 'Ds', 'Is']
+
+    sample_data = np.array([i for i in data[2:-1] if i[0] == sample or sample in i[9] if i[11] == 'results'])
+    holder_data = np.array([i for i in data[2:-1] if i[0] == 'acryl' if i[11] == 'results'])
+
+    out = {header[i].lower(): sample_data[:, i] for i in range(len(header))}
+    out['acryl'] = {header[i].lower(): holder_data[:, i] for i in range(len(header))}
+
+    for i in floats:
+        out[i] = map(float, out[i])
+        out['acryl'][i] = map(float, out[i])
+    out['step'] = map(int, out['step'])
+
+    def time_conv(t):
+        return time.strptime(t, "%y-%m-%d %H:%M:%S")
+
+    out['time'] = map(time_conv, out['time'])
     return out
 
 
@@ -233,9 +265,11 @@ def vftb(file, *args, **options):
     out = [i.strip('\r\n').split('\t') for i in reader_object.readlines()]
     mass = float(out[0][1].split()[1])
     out = np.array([map(float, i) for i in out[4:]])
-    header = {"field": [0, float],"moment": [1, float],"temp": [2, float],"time": [3, float],"std dev": [4, float],"suscep / emu / g / Oe": [5, float]}
+    header = {"field": [0, float], "moment": [1, float], "temp": [2, float], "time": [3, float], "std dev": [4, float],
+              "suscep / emu / g / Oe": [5, float]}
 
     out = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in out]) for column in
-               header}
-    out['moment'] *= mass /1E3
+           header}
+    out['moment'] *= mass / 1E3
+    out['field'] *= 0.0001
     return out

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import math as math
 import scipy.special as sp
 import distributions, functions
-from lmfit import Parameters, minimize, printfuncs
+from lmfit import Parameters, minimize, printfuncs, report_fit
 import matplotlib.pyplot as plt
 from RockPyV3.Functions import general
 from scipy.optimize import curve_fit
@@ -18,7 +18,7 @@ class Fit(object):
 
         self.x = x_data
         self.y = y_data
-        
+
         if not paramters:
             self.parameters = Parameters()
         else:
@@ -30,9 +30,8 @@ class Fit(object):
 
 
 class HyperbolicBase(Fit):
-
-    def __init__(self, x_data, y_data, paramters = None):
-        super(HyperbolicBase, self).__init__(x_data, y_data, paramters = None)
+    def __init__(self, x_data, y_data, paramters=None):
+        super(HyperbolicBase, self).__init__(x_data, y_data, paramters=None)
 
 
 class Tanh(Fit):
@@ -66,7 +65,7 @@ class Log_Normal(Fit):
     general.create_logger('RockPy.FITTING.log_normal')
 
     def __init__(self, x_data, y_data, paramters=None):
-        self.log = logging.getLogger('RockPy.FITTING.TANH')
+        self.log = logging.getLogger('RockPy.FITTING.log_normal')
         super(Log_Normal, self).__init__(x_data, y_data, paramters=None, log=self.log)
         self.log.info('FITTING\t log normal distribution to data')
         self.fit_x = np.linspace(min(self.x), max(self.x), 1000)
@@ -79,6 +78,7 @@ class Log_Normal(Fit):
         fitout = minimize(errfunc, self.parameters, args=(self.x, self.y))
 
         self.fit_y = functions.log_normal(self.parameters, self.fit_x)
+        report_fit(self.parameters)
 
     def calc(self, x_value):
         out = functions.log_normal(self.parameters, x_value)

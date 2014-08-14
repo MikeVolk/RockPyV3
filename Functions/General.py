@@ -9,17 +9,17 @@ from math import sin, cos, tan
 def create_logger(name):
     log = logging.getLogger(name=name)
     log.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh = logging.FileHandler('RPV3.log')
-    fh.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s - %(name)s \t %(levelname)s - %(message)s')
+    # fh = logging.FileHandler('RPV3.log')
+    # fh.setFormatter(formatter)
     # ch = logging.FileHandler('RPV3.log')
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(formatter)
-    log.addHandler(fh)
+    # log.addHandler(fh)
     log.addHandler(ch)
 
-    return ch, fh
+    return ch#, fh
 
 
 def differentiate(data_list, diff=1, smoothing=1, norm=False, check=False):
@@ -34,7 +34,7 @@ def differentiate(data_list, diff=1, smoothing=1, norm=False, check=False):
     :param check:
     :return:
     """
-    log = logging.getLogger('RockPy.FUNCTIONS.general.differentiate')
+    log = logging.getLogger('RockPy.FUNCTIONS.general.diff')
     log.info('DIFFERENTIATING\t data << %i derivative - smoothing: %i >>' % (diff, smoothing))
     data_list = np.array(data_list)
     # getting X, Y data

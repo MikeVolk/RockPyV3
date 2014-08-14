@@ -22,11 +22,12 @@ import csv
 
 
 class Measurement(object):
-    general.create_logger(__name__)
-
     def __init__(self, sample, mtype, mfile, machine, log=None):
         if not log:
             self.log = logging.getLogger('RockPy.MEASUREMENT')
+        else:
+            self.log = logging.getLogger(log)
+
         implemented = {
             'af-demag': '',
             'parm-spectra': '',
@@ -60,12 +61,13 @@ class Measurement(object):
                                'irm': machines.vsm,
                                'coe': machines.vsm,
                                'visc': machines.vsm},
-                       'cryo_nl': {'palint': machines.cryo_nl},
+                       'cryo_nl': {'palint': machines.cryo_nl2},
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, },
                        'simulation': {'palint': machines.simulation,
                                       },
-                       'vftb': {'hys': machines.vftb}}
+                       'vftb': {'hys': machines.vftb,
+                                'coe': machines.vftb}}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
         self.raw_data = None
@@ -181,25 +183,38 @@ class Coe(Measurement):
     def __init__(self, sample, mtype, mfile, machine, mag_method):
         self.log = logging.getLogger('RockPy.MEASUREMENT.COE')
         Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
-        self.info = self.raw_data[-1]
-        self.measurement_settings = self.info['SCRIPT']
 
-        if self.measurement_settings['Include IRM?'] == 'Yes':
-            self.fields = self.raw_data[1][1][:, 0]
-            self.rem = self.raw_data[1][1][:, 1]
-            if self.measurement_settings['Include direct moment?'] == 'Yes':
-                self.dmom = self.raw_data[1][1][:, 2]
-                self.direct_moment = np.column_stack((self.fields, self.dmom))
+        ''' VSM '''
 
-        else:
-            self.fields = self.raw_data[1][0][:, 0]
-            self.rem = self.raw_data[1][0][:, 1]
-            if self.measurement_settings['Include direct moment?'] == 'Yes':
-                self.dmom = self.raw_data[1][0][:, 2]
-                self.direct_moment = np.column_stack((self.fields, self.dmom))
+        if machine.lower() == 'vsm':
+            self.info = self.raw_data[-1]
+            self.measurement_settings = self.info['SCRIPT']
+
+            if self.measurement_settings['Include IRM?'] == 'Yes':
+                self.fields = self.raw_data[1][1][:, 0]
+                self.rem = self.raw_data[1][1][:, 1]
+                if self.measurement_settings['Include direct moment?'] == 'Yes':
+                    self.dmom = self.raw_data[1][1][:, 2]
+                    self.direct_moment = np.column_stack((self.fields, self.dmom))
+
+            else:
+                self.fields = self.raw_data[1][0][:, 0]
+                self.rem = self.raw_data[1][0][:, 1]
+                if self.measurement_settings['Include direct moment?'] == 'Yes':
+                    self.dmom = self.raw_data[1][0][:, 2]
+                    self.direct_moment = np.column_stack((self.fields, self.dmom))
+
+        ''' VFTB '''
+
+        if machine.lower() == 'vftb':
+            self.info = {}
+            self.measurement_settings = {'Include IRM?': 'No',
+                                         'Include direct moment?': 'No'}
+            self.fields = self.raw_data['field']
+            self.rem = self.raw_data['moment']
+            self.moments = np.zeros(len(self.fields))
 
         self.remanence = np.column_stack((self.fields, self.rem))
-
         self.remanence_interpolated = self.interpolate('remanence')
 
         if self.measurement_settings['Include direct moment?'] == 'Yes':
@@ -224,9 +239,11 @@ class Coe(Measurement):
         '''
         log_fields = np.log10(np.fabs(self.remanence[:, 0]))
         # tanh_fit=fitting.Tanh(log_fields, self.remanence[:,1])
+
         log_norm_fit = fitting.Log_Normal(log_fields, self.remanence[:, 1] - min(self.remanence[:, 1]))
         idx = np.argmin(abs(log_norm_fit.fit_y + min(self.remanence[:, 1])))
         out = 10 ** log_norm_fit.fit_x[idx]
+
         if check:
             plt.axhline(color='k')
             plt.axvline(color='k')
@@ -288,6 +305,7 @@ class Hysteresis(Measurement):
         if machine.lower() == 'vsm':
             self.info = self.raw_data[2]
             self.calibration_factor = float(self.info['SETTINGS']['Calibration factor'])
+            adj = self.info.get('adjusted', False)
             if adj:
                 self.fields = np.array([[j[2] for j in i] for i in self.raw_data[1]])
                 self.moments = np.array([[j[3] for j in i] for i in self.raw_data[1]])
@@ -301,7 +319,6 @@ class Hysteresis(Measurement):
             self.fields = self.raw_data.get('field')
             self.moments = self.raw_data.get('moment')
 
-        adj = self.info.get('adjusted', False)
 
         ### initialize
         self.virgin = None
@@ -798,12 +815,12 @@ class Thellier(Measurement):
     '''
 
     '''
-    general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
+    # general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
 
     def __init__(self, sample, mtype, mfile, machine, mag_method=None, lab_field=35):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.thellier-thellier')
+        log = 'RockPy.MEASUREMENT.thellier-thellier'
 
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        Measurement.__init__(self, sample, mtype, mfile, machine, log)
 
         self.correction = ''
         self.components = {'temp':0, 'x': 1, 'y': 2, 'z': 3, 'm': 4, 'time':5}
@@ -865,15 +882,21 @@ class Thellier(Measurement):
         out = getattr(self, step)[:, types[type]]
         return out
 
-    def _get_th_ptrm_data(self, t_min=20, t_max=700):
+    def _get_th_ptrm_data(self, t_min=20, t_max=700, **options):
         """
-        Returns th, ptrm data
+        Returns th, ptrm data with [x,y,z] if option 'm'=True is given, it outputs [x,y,z,m]
 
         :param t_min: float
         :param t_max: float
         :return: ndarray
         """
-        xy_data = np.array([[i[1:5], j[1:5]] for i in self.th for j in self.ptrm
+        m = options.get('m')
+
+        if m:
+            ran = 5
+        else:
+            ran = 4
+        xy_data = np.array([[i[1:ran], j[1:ran]] for i in self.th for j in self.ptrm
                             if i[0] == j[0]
                             if t_min <= i[0] <= t_max
                             if t_min <= j[0] <= t_max])
@@ -1130,12 +1153,12 @@ class Thellier(Measurement):
         # x = x[:,1:4]
 
         y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
-        y = np.fabs(y)
-        x = np.fabs(x)
 
+        x = np.fabs(x)
         x_m = [np.linalg.norm(i) for i in x]  # add M data
         x = np.c_[x, x_m]  # append M data column
 
+        y = np.fabs(y)
         y_m = [np.linalg.norm(i) for i in y]  # add M data
         y = np.c_[y, y_m]  # append M data column
 
@@ -1468,7 +1491,9 @@ class Thellier(Measurement):
         plt.legend(loc='best')
         plt.show()
 
-    def print_statistics_table(self, component='m', t_min=20, t_max=700, lab_field=35, header=True):
+    def print_statistics_table(self, component='m', t_min=20, t_max=700, lab_field=35, header=True, **options):
+        csv = options.get('csv')
+        csv_header = options.get('csv_header')
         idx = self.components[component] - 1
         slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
         f = self.f(t_min=t_min, t_max=t_max)
@@ -1485,7 +1510,8 @@ class Thellier(Measurement):
             'intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC', 'beta',
             'g',
             'q', 'gap_max', 'w')
-
+        csv_header = ['intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC',
+                      'beta', 'g', 'q', 'gap_max', 'w']
         # data = [slopes*lab_field, sigmas*lab_field, slopes, sigmas, y_intercept, x_intercept, f,f_VDS, VDS, FRAC, beta, g, q, gap_max, w]
         data = [-slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
                 x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx]]
@@ -1493,11 +1519,12 @@ class Thellier(Measurement):
         out = '%.2f\t %.2f\t %.2f\t %.2f\t %.3e\t %.3e\t %.2f\t %.2f\t %.3e\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f' % (
             -slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
             x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx])
-
-        if header:
-            print out_header
-        print out
-        return data
+        if header: print out_header
+        if csv_header:
+            return csv_header
+        # if csv: return data
+        else:
+            return data
 
     ''' NON STATISTIC FUNCTIONS '''
 

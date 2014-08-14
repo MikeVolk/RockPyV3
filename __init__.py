@@ -1,6 +1,10 @@
 __author__ = 'Mike'
+import logging
+
 import helper
-# import Functions
+import Functions
+
+Functions.general.create_logger('RockPy')
 # import ReadIn
 from Structure.sample import Sample
 from Structure.sample import SampleGroup
