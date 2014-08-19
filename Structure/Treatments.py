@@ -26,12 +26,16 @@ class Pressure(Treatment):
         self.log.info('CREATING\t                                                    with options: %s' % options)
         p_max = options.get('p_max', 0)
         p_seen = options.get('p_seen', 0)
+        self.p_unit = options.get('p_unit', 'GPa')
         self.p_max = p_max
         self.p_seen = p_seen
         self.label = self.get_label()
 
     def get_label(self):
-        label = 'P' + str(self.p_seen) + '|' + str(self.p_max)
+        if self.p_seen != self.p_max:
+            label = 'P ' + str(self.p_seen) + '|' + str(self.p_max) + ' ' + self.p_unit
+        else:
+            label = 'P ' + str(self.p_seen) + ' ' + self.p_unit
         return label
 
     def __repr__(self):

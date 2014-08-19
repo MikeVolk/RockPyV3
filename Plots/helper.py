@@ -1,7 +1,7 @@
 __author__ = 'mike'
 
 
-def get_moment_label(nom_factor):
+def get_moment_label(norm_factor):
     # if not norm_factor:
     # norm_factor = 'none'
 
@@ -9,9 +9,10 @@ def get_moment_label(nom_factor):
              'mass': 'magnetic moment [$\\frac{Am^2}{kg}$]',
              'None': 'magnetic moment [$Am^2$]',
              'trm': 'magnetic moment normalized',
+             'nrm': 'magnetic moment normalized',
     }
 
-    out = texts[nom_factor]
+    out = texts[norm_factor]
     return out
 
 

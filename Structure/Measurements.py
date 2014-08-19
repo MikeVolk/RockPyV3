@@ -147,21 +147,22 @@ class Af_Demag(Measurement):
         RPV3plots.Af_Demag(self.sample)
 
 class pARM_spectra(Measurement):
-    general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
+    # general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
 
     def __init__(self, sample, mtype, mfile, machine, mag_method):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.PARM-SPECTRA')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        log = 'RockPy.MEASUREMENT.parm-spectra'
+        Measurement.__init__(self, sample, mtype, mfile, machine, log)
         try:
             self.raw_data.pop('sample')
             self.__dict__.update(self.raw_data)
-            self.__dict__['ac_field'] = self.__dict__.pop('par1')
-            self.__dict__['dc_field'] = self.__dict__.pop('par2')
-            self.__dict__['u_window_limit'] = self.__dict__.pop('par3')
-            self.__dict__['l_window_limit'] = self.__dict__.pop('par4')
-            self.__dict__['window_size'] = self.__dict__.pop('par5')
-            self.windows = np.array([[self.__dict__['l_window_limit'][i], self.__dict__['u_window_limit'][i]] for i in
-                                     range(len(self.u_window_limit))])
+            self.ac_field = self.__dict__.pop('par1')
+            self.dc_field = self.__dict__.pop('par2')
+            self.u_window_limit = self.__dict__.pop('par3')
+            self.l_window_limit = self.__dict__.pop('par4')
+            self.window_size = self.__dict__.pop('par5')
+            self.windows = np.vstack((self.l_window_limit,self.u_window_limit  ))
+            self.fields = np.mean(self.windows, axis = 0)
+
         except AttributeError:
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
@@ -171,17 +172,21 @@ class pARM_spectra(Measurement):
             return None
 
     def subtract_af3(self):
-        self.log.debug('CREATING\t COPY of %s' % self)
         self.log.info('SUBTRACTING\t AF3 data of pARM measurement')
-        self_copy = copy.copy(self)
-        self_copy.x -= self.x[0]
-        self_copy.y -= self.y[0]
-        self_copy.z -= self.z[0]
+        self.x -= self.x[0]
+        self.y -= self.y[0]
+        self.z -= self.z[0]
+        self.m = np.array([np.sqrt(self.x[i] ** 2 + self.y[i] ** 2 + self.z[i] ** 2) for i in range(len(self.x))])
 
-        self_copy.m = np.array([np.sqrt(self.x[i] ** 2 + self.y[i] ** 2 + self.z[i] ** 2) for i in range(len(self.x))])
-        self.log.info('RETURNING\t COPY with subtracted AF3')
-        return self_copy
+        keys = ['fields', 'is', 'site', 'strat_level', 'mtype', 'par6', 'ic', 'steps/rev', 'ig', 'window_size',
+                'hade', 'ac_field', 'a95', 'type', 'bl diff/sample', 'run',
+                'u_window_limit', 'dspin', 'dg', 'geoaz', 'dc', 'l_window_limit', 'ispin', 'cup/sample', 'ds',
+                'windows', 'm', 'dipdir', 'npos', 'sm', 'time', 'y', 'x', 'z', 'dip', ' holder/sample',
+                'dc_field']
 
+        self.log.debug('DELETING\t AF3 data of pARM measurement')
+        for k in keys:
+            self.__dict__[k] = self.__dict__[k][1:]
 
 class Coe(Measurement):
     general.create_logger('RockPy.MEASUREMENT.COE')
@@ -909,6 +914,8 @@ class Thellier(Measurement):
         x = xy_data[:, 0]
         y = xy_data[:, 1]
         return x, y
+
+
     def _get_th_ptrm_stdev_data(self, t_min=20, t_max=700):
         """
         Returns th, ptrm data
@@ -1147,26 +1154,10 @@ class Thellier(Measurement):
     def calculate_slope(self, t_min=20, t_max=700, **options):
         self.log.info('CALCULATING\t arai line fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
 
-        # xy_data = np.array([[i, j] for i in self.th for j in self.ptrm
-        # if i[0] == j[0]
-        # if t_min <= i[0] <= t_max
-        # if t_min <= j[0] <= t_max])
-        #
-        # y = xy_data[:,0]
-        # y = y[:,1:4]
-        #
-        # x = xy_data[:,1]
-        # x = x[:,1:4]
-
-        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+        y, x = self._get_th_ptrm_data(t_min=t_min, t_max=t_max, m=True)
 
         x = np.fabs(x)
-        x_m = [np.linalg.norm(i) for i in x]  # add M data
-        x = np.c_[x, x_m]  # append M data column
-
         y = np.fabs(y)
-        y_m = [np.linalg.norm(i) for i in y]  # add M data
-        y = np.c_[y, y_m]  # append M data column
 
         ''' calculate averages '''
 
@@ -1499,7 +1490,8 @@ class Thellier(Measurement):
 
     def print_statistics_table(self, component='m', t_min=20, t_max=700, lab_field=35, header=True, **options):
         csv = options.get('csv')
-        csv_header = options.get('csv_header')
+        csv_hdr = options.get('csv_header')
+
         idx = self.components[component] - 1
         slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(t_min=t_min, t_max=t_max)
         f = self.f(t_min=t_min, t_max=t_max)
@@ -1518,17 +1510,19 @@ class Thellier(Measurement):
             'q', 'gap_max', 'w')
         csv_header = ['intensity', 'stdev', 'slope', 'sigma', 'y_intercept', 'x_intercept', 'f', 'f_VDS', 'VDS', 'FRAC',
                       'beta', 'g', 'q', 'gap_max', 'w']
-        # data = [slopes*lab_field, sigmas*lab_field, slopes, sigmas, y_intercept, x_intercept, f,f_VDS, VDS, FRAC, beta, g, q, gap_max, w]
+
         data = [-slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
                 x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx]]
 
         out = '%.2f\t %.2f\t %.2f\t %.2f\t %.3e\t %.3e\t %.2f\t %.2f\t %.3e\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f' % (
             -slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
             x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx])
+
         if header: print out_header
-        if csv_header:
+        if csv_hdr:
             return csv_header
-        # if csv: return data
+        if csv:
+            return data
         else:
             return data
 

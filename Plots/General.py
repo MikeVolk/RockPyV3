@@ -13,7 +13,7 @@ import backfield, hysteresis
 
 
 class Plot(object):
-    log = general.create_logger('RockPy.PLOTTING')
+    # log = general.create_logger('RockPy.PLOTTING')
 
     def __init__(self, samples_list, norm=None, log=None, value=None,
                  plot='show', folder=None, name='output.pdf',
@@ -32,6 +32,9 @@ class Plot(object):
                   # 'text.usetex': True,
                   'axes.unicode_minus': True}
         plt.rcParams.update(params)
+
+        self.x_label = None
+        self.y_label = None
 
         self.plot = plot
 
@@ -65,6 +68,9 @@ class Plot(object):
         plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
 
     def out(self, *args):
+        if not '.pdf' in self.name:
+            self.name += '.pdf'
+
         out_options = {'show': plt.show,
                        'rtn': self.get_fig,
                        'save': self.save_fig}
@@ -81,7 +87,10 @@ class Plot(object):
         return self.fig1
 
     def save_fig(self):
-        plt.savefig(self.folder + self.samples[0].name + '_' + self.name, dpi=300)
+        try:
+            plt.savefig(self.folder + self.samples[0].name + '_' + self.name, dpi=300)
+        except IndexError:
+            plt.savefig(self.folder + self.name, dpi=300)
 
 
 class Af_Demag(Plot):
@@ -114,6 +123,76 @@ class Af_Demag(Plot):
 
         self.ax.legend(handles, labels)
         return self.ax
+
+class PARM_spectra(Plot):
+
+
+    def __init__(self, samples_list, norm='mass', log=None, value=None,
+                 plot='show', folder=None, name='pARM-spectra',
+                 plt_opt={}, **options):
+
+        if not log:
+            log = 'RockPy.PLOTTING.parm-spectra'
+
+        super(PARM_spectra, self).__init__(samples_list=samples_list,
+                                         norm=norm, log=log, value=value,
+                                         plot=plot, folder=folder, name=name,
+                                         **options)
+        self.x_label = 'DC Bias window [mT]'
+
+        try:
+            self.show()
+            self.out()
+        except AttributeError:
+            self.log.warning('<< AttributeError >> CANNOT execute show(): \t something is not right...')
+
+
+    def show(self):
+        for sample in self.samples:
+            for measurement in sample.find_measurement('parm-spectra'):
+                label = sample.name
+                if measurement.treatment:
+                    label += '\t' + measurement.treatment.get_label()
+                factor = {'mass': measurement.sample.mass_kg,
+                          'max': max(np.fabs(measurement.m)),
+                          None: 1}
+                norm_factor = factor[self.norm]
+                measurement.subtract_af3()
+                self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
+                self.log.info('PLOT\t of: %s' % (sample.name))
+
+                self.ax.plot(measurement.fields, measurement.m)
+        #         std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
+        #         self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
+        #                      color=std.get_color())
+        #
+        #         handles, labels = self.ax.get_legend_handles_labels()
+        #         self.ax.legend(handles, labels, prop={'size': 8})
+        # plt.show()
+
+
+class IRM(Plot):
+    def show(self):
+        for sample in self.samples:
+            for measurement in sample.find_measurement('irm'):
+                label = sample.name
+                if measurement.treatment:
+                    label += '\t' + measurement.treatment.get_label()
+                factor = {'mass': measurement.sample.mass_kg,
+                          'max': max(measurement.up_field[:, 1]),
+                          None: 1}
+                norm_factor = factor[self.norm]
+                self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
+                self.log.info('PLOT\t of: %s' % (sample.name))
+
+                std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
+                self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
+                             color=std.get_color())
+
+                handles, labels = self.ax.get_legend_handles_labels()
+                self.ax.legend(handles, labels, prop={'size': 8})
+        plt.show()
+
 
 class Hysteresis(Plot):
     log = general.create_logger('RockPy.PLOTTING.hysteresis')
@@ -250,37 +329,16 @@ class Hys_Fabian2003(Hysteresis):
         # self.ax_low.legend(loc='best', frameon = False, prop={'size':8})
 
 
-
-class IRM(Plot):
-    def show(self):
-        for sample in self.samples:
-            for measurement in sample.find_measurement('irm'):
-                label = sample.name
-                if measurement.treatment:
-                    label += '\t' + measurement.treatment.get_label()
-                factor = {'mass': measurement.sample.mass_kg,
-                          'max': max(measurement.up_field[:, 1]),
-                          None: 1}
-                norm_factor = factor[self.norm]
-                self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
-                self.log.info('PLOT\t of: %s' % (sample.name))
-
-                std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
-                self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
-                             color=std.get_color())
-
-                handles, labels = self.ax.get_legend_handles_labels()
-                self.ax.legend(handles, labels, prop={'size': 8})
-        plt.show()
-
-
 class Dunlop(Plot):
     # self, samples_list, norm='mass', log=None, value=None,
     #              plot='show', folder=None, name='hysteresis',
     #              plt_opt={}, **options)
     def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, plot='show', folder=None,
                  name='dunlop plot', **plt_opt):
+        # todo homogenize with def plot
+        '''
 
+        '''
 
         measurement_test = False
 
@@ -293,6 +351,7 @@ class Dunlop(Plot):
 
         super(Dunlop, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
                                      name=name)
+
         for sample_obj in self.samples:
             if not measurement_test:
                 self.measurements = sample_obj.find_measurement('palint')
@@ -302,6 +361,7 @@ class Dunlop(Plot):
                 factors = {'mass': sample_obj.mass_kg,
                            'max': measurement.sum[:, components[component]],
                            'trm': measurement.trm[:, components[component]],
+                           'nrm': measurement.nrm[:, components[component]],
                            'None': 1,
                            }
 
@@ -324,6 +384,7 @@ class Dunlop(Plot):
                                                  norm=norm, norm_factor=norm_factor,
                                                  text=True, plt_idx=idx)
                 self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
+            plt.tight_layout(pad=2.7)
 
         self.out(plot, 'nolable')
 
@@ -336,18 +397,33 @@ class Arai(Plot):
                  **options):
         super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
                                    name=name)
-
+        std = options.get('std', True)
         for sample_obj in self.samples:
             self.measurements = sample_obj.find_measurement('palint')
             self.t_min = t_min
             self.t_max = t_max
+
+            label_aux = ''
+            if len(self.samples) > 1:
+                label_aux += sample_obj.name + ''
+
             for measurement in self.measurements:
+                if len(self.measurements) > 1:
+                    if measurement.treatment:
+                        label = label_aux+measurement.treatment.label
+                    else:
+                        label = label_aux+ self.measurements.index(measurement)
+                else:
+                    label =''
+
                 components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
                 factors = {'mass': [sample_obj.mass_kg, sample_obj.mass_kg],
                            'max': [max(measurement.sum[:, components[component]]),
                                    max(measurement.sum[:, components[component]])],
                            'trm': [measurement.trm[:, components[component]][0],
                                    measurement.trm[:, components[component]][0]],
+                           'nrm': [measurement.nrm[:, components[component]][0],
+                                   measurement.nrm[:, components[component]][0]],
                            'th': [measurement.th[0, components[component]], measurement.th[0, components[component]]],
                            'dnorm': [measurement.ptrm[-1, components[component]], measurement.th[0, components[component]]],
                            'none': [1, 1],
@@ -370,21 +446,30 @@ class Arai(Plot):
                 paleointensity.arai(palint_object=measurement, ax=self.ax,
                                     t_min=self.t_min, t_max=self.t_max,
                                     line=line, check=check,
-                                    plt_idx=idx,
+                                    plt_idx=idx,label=label,
                                     norm_factor=norm_factor, component=component,
                                     plt_opt=plt_opt, **options)
 
                 if measurement.th_stdev != None:
-                    paleointensity.arai_stdev(palint_object=measurement, ax=self.ax,
-                                    t_min=self.t_min, t_max=self.t_max,
-                                    plt_idx=idx,
-                                    norm_factor=norm_factor, component=component,
-                                    plt_opt=plt_opt, **options)
+                    if std:
+                        paleointensity.arai_stdev(palint_object=measurement, ax=self.ax,
+                                        t_min=self.t_min, t_max=self.t_max,
+                                        plt_idx=idx,
+                                        norm_factor=norm_factor, component=component,
+                                        plt_opt=plt_opt, **options)
 
 
-                self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
-
+        self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
         self.x_label = 'pTRM gained'
         self.y_label = 'NRM remaining'
+
+        '''general plotting'''
         plt.gca().set_ylim(bottom=0)
+        try:
+            leg = plt.legend(loc = 'best', fancybox = True)
+            leg.get_frame().set_alpha(0.5)
+        except AttributeError:
+            self.log.warning('COULD not set frame alpha. Probably no labels')
+        # plt.subplots_adjust(top=0.94)
+        plt.tight_layout(pad=2.7)
         self.out(plot)

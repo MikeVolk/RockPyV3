@@ -38,17 +38,17 @@ def dunlop_std(palint_object, ax, component='m', norm_factor=1, plt_idx=0, out='
     colors = helper.get_colors()
     try:
         ax.fill_between(palint_object.th[:, 0],
-                        palint_object.th[:, idx] - palint_object.th_stdev[:, idx] / norm_factor,
-                        palint_object.th[:, idx] + palint_object.th_stdev[:, idx] / norm_factor,
+                        (palint_object.th[:, idx] - palint_object.th_stdev[:, idx]) / norm_factor,
+                        (palint_object.th[:, idx] + palint_object.th_stdev[:, idx]) / norm_factor,
                         color=colors[0], alpha=0.1)
 
         ax.fill_between(palint_object.sum[:, 0],
-                        palint_object.sum[:, idx] - palint_object.sum_stdev[:, idx] / norm_factor,
-                        palint_object.sum[:, idx] + palint_object.sum_stdev[:, idx] / norm_factor,
+                        (palint_object.sum[:, idx] - palint_object.sum_stdev[:, idx]) / norm_factor,
+                        (palint_object.sum[:, idx] + palint_object.sum_stdev[:, idx]) / norm_factor,
                         color=colors[1], alpha=0.1)
         ax.fill_between(palint_object.ptrm[:, 0],
-                        palint_object.ptrm[:, idx] - palint_object.ptrm_stdev[:, idx] / norm_factor,
-                        palint_object.ptrm[:, idx] + palint_object.ptrm_stdev[:, idx] / norm_factor,
+                        (palint_object.ptrm[:, idx] - palint_object.ptrm_stdev[:, idx]) / norm_factor,
+                        (palint_object.ptrm[:, idx] + palint_object.ptrm_stdev[:, idx]) / norm_factor,
                         color=colors[2], alpha=0.1)
     except AttributeError:
         return
@@ -59,6 +59,7 @@ def arai(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_id
          out='show', folder=None, name='output.pdf',
          line=True, check=True,
          plt_opt={}, **options):
+    label = options.get('label', '')
     idx = palint_object.components[component]
     markers = helper.get_marker()
     colors = helper.get_colors()
@@ -72,7 +73,7 @@ def arai(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_id
         plt_opt.update({'ls': ''})
 
     ax.plot(np.fabs(ptrm), np.fabs(th),
-            marker='o', color=colors[plt_idx], **plt_opt)
+            marker='o', color=colors[plt_idx], label = label,**plt_opt)
 
     area = options.get('area')
     temps = options.get('temps')
@@ -117,7 +118,9 @@ def arai_stdev(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], 
     markers = helper.get_marker()
     colors = helper.get_colors()
 
-    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max)
+    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max, m=True)
+    x /= norm_factor[0]
+    y /= norm_factor[1]
     y_stdev, x_stdev = palint_object._get_th_ptrm_stdev_data(t_min=t_min, t_max=t_max)
 
     ax.fill_between(x[:,idx], y[:,idx]+y_stdev[:,idx], y[:,idx]-y_stdev[:,idx], color=colors[plt_idx], alpha=0.2)
@@ -162,9 +165,9 @@ def add_arai_line(palint_object, ax, component='m', t_min=20, t_max=700, norm=No
 
     slopes, sigmas, y_intercept, x_intercept = palint_object.calculate_slope(t_min=t_min, t_max=t_max)
 
-    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max)
-    x_m = [np.linalg.norm(i) for i in x]
-    x = np.c_[x, x_m]
+    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max, m=True)
+    # x_m = [np.linalg.norm(i) for i in x]
+    # x = np.c_[x, x_m]
 
     # todo sum of x,y,z = 1
     x_fit = np.linspace(x[0, idx - 1], x[-1, idx - 1], 2)

@@ -12,7 +12,7 @@ import csv
 
 
 class SampleGroup(object):
-    general.create_logger('RockPy.SAMPLEGROUP')
+    # general.create_logger('RockPy.SAMPLEGROUP')
 
     def __init__(self, sample_dict=None, sample_list=None, name='', log=None):
         if not log:
@@ -227,33 +227,48 @@ class TTGroup(SampleGroup):
             return
 
     def get_statistics(self, component='m', t_min=20, t_max=700,
-                       out='print', folder=None, name='paleointensity_statistics.stats.csv',
+                       rtn='print', folder=None, name='paleointensity_statistics.stats.csv',
                        **options):
         measurements = self.get_all_measurements(mtype='palint')
         treatments = self.get_treatment_for_mtype(mtype='palint')
-
+        if not '.csv' in name:
+            name +='.csv'
         if folder == None:
             from os.path import expanduser
-
             folder = expanduser("~") + '/Desktop/'
 
-        out = ['sample', 'treatment']
-        out += measurements[0].print_statistics_table(component, t_min, t_max, header=False, csv_header=True)
+        out = []
+        hdr = ['sample', 'treatment']
+        hdr += measurements[0].print_statistics_table(component, t_min, t_max, header=False, csv_header=True)
+        out.append(hdr)
         for treat in treatments:  # getting measurements with the same treatments
             measurements_treat = [i for i in measurements if i.treatment.label == treat]
             for measurement in measurements_treat:
-                aux = [measurement.sample.name, measurement.treatment.label,
-                       measurement.print_statistics_table(component, t_min, t_max, header=False, csv=True)]
-                print aux
+                aux = [measurement.sample.name, measurement.treatment.label]
+                aux += measurement.print_statistics_table(component, t_min, t_max, header=False, csv=True)
                 out.append(aux)
 
-        with open(folder + name, 'wb') as csvfile:
-            spamwriter = csv.writer(csvfile)
+        if rtn == 'save':
+            with open(folder + name, 'wb') as csvfile:
+                spamwriter = csv.writer(csvfile)
+                for i in out:
+                    spamwriter.writerow(i)
+        elif rtn =='print':
             for i in out:
-                spamwriter.writerow(i)
+                print i
+
+        if rtn not in ['save', 'print']:
+            hdr = {hdr[i]:i for i in range(len(hdr))}
+            if rtn not in hdr:
+                self.log.error('OUTPUT << %s >> not recognized' %rtn)
+            else:
+                treatments = list(set([i[hdr['treatment']] for i in out[1:]]))
+                out = np.array([[[i[hdr['sample']], i[hdr['treatment']], i[hdr[rtn]]] for i in out[1:] if i[hdr['treatment']] == treat] for treat in treatments])
+                # out = np.array([[i[hdr['sample']], i[hdr['treatment']], i[hdr[rtn]]] for i in out[1:]])
+                return out
 
     def get_sample_obj(self):
-        sample_obj = Sample(name=self.name)
+        sample_obj = Sample(name=self.name, mass=1, mass_unit='kg')
         measurements = self.get_all_measurements(mtype='palint')
         treatments = self.get_treatment_for_mtype(mtype='palint')
 
@@ -480,6 +495,7 @@ class Sample():
             'irm': measurements.Irm,
             'coe': measurements.Coe,
             'visc': measurements.Viscosity,
+            'parm-spectra': measurements.pARM_spectra,
         }
 
         if mtype.lower() in implemented:

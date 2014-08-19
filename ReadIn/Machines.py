@@ -75,9 +75,15 @@ def sushibar(file, sample, *args, **options):
 
     for i in floats:
         try:
-            out[i] = map(float, out[i])
+            out[i] = np.array(map(float, out[i]))
         except ValueError:
-            continue
+            for j in range(len(out[i])):
+                if out[i][j] == 'None':
+                    out[i][j] = '0'
+            try:
+                out[i] = np.array(map(float, out[i]))
+            except ValueError:
+                continue
 
     out['run'] = map(int, out['run'])
 
