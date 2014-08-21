@@ -33,6 +33,7 @@ class Plot(object):
                   'axes.unicode_minus': True}
         plt.rcParams.update(params)
 
+        self.colors = helper.get_colors()
         self.x_label = None
         self.y_label = None
 
@@ -148,20 +149,28 @@ class PARM_spectra(Plot):
 
 
     def show(self):
+        plt_idx = 0
         for sample in self.samples:
             for measurement in sample.find_measurement('parm-spectra'):
                 label = sample.name
                 if measurement.treatment:
                     label += '\t' + measurement.treatment.get_label()
+
+                measurement.subtract_af3()
+
                 factor = {'mass': measurement.sample.mass_kg,
                           'max': max(np.fabs(measurement.m)),
                           None: 1}
                 norm_factor = factor[self.norm]
-                measurement.subtract_af3()
+
                 self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
                 self.log.info('PLOT\t of: %s' % (sample.name))
 
-                self.ax.plot(measurement.fields, measurement.m)
+                x = measurement.fields
+                y = measurement.m / norm_factor
+                self.ax.plot(x,y, marker = '.',
+                             color = self.colors[plt_idx])
+                plt_idx +=1
         #         std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
         #         self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
         #                      color=std.get_color())

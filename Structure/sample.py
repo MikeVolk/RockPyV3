@@ -304,7 +304,7 @@ class TTGroup(SampleGroup):
         return sample_obj
 
     def get_TT_obj(self):
-        TT_obj = measurements.Thellier(sample=self.name, mtype=None, mfile=None, machine=None)
+        TT_obj = measurements.Thellier(sample_obj=self.name, mtype=None, mfile=None, machine=None)
 
         TT_obj.nrm = self.get_data_mean(step='nrm')
         TT_obj.trm = self.get_data_mean(step='trm')
@@ -464,7 +464,11 @@ class Sample():
         self.log.debug(
             ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [m]' % (diameter, length_unit, self.diameter_m))
 
-    def add_measurement(self, mtype, mfile, machine, mag_method=None):
+    def add_measurement(self,
+                        mtype=None, mfile=None, machine=None, # general
+                        mag_method=None, # IRM
+                        af_obj = None, parm_obj = None, # pseudo-thellier
+                        **options):
         '''
 
         :param mtype: str - the type of measurement
@@ -485,6 +489,9 @@ class Sample():
 
         '''
 
+        # options = {'af_obj':af_obj, 'parm_obj':parm_obj}
+
+
         implemented = {
             'af-demag': measurements.Af_Demag,
             'af': measurements.Af_Demag,
@@ -496,12 +503,16 @@ class Sample():
             'coe': measurements.Coe,
             'visc': measurements.Viscosity,
             'parm-spectra': measurements.pARM_spectra,
+            'pseudo-thellier': measurements.Pseudo_Thellier,
         }
 
         if mtype.lower() in implemented:
             self.log.info(' ADDING\t << measurement >> %s' % mtype)
-            measurement = implemented[mtype.lower()](self, mtype, mfile, machine, mag_method)
-            # if measurement.raw_data:
+            measurement = implemented[mtype.lower()](self,
+                                                     mtype=mtype, mfile=mfile, machine=machine,
+                                                     mag_method = mag_method,
+                                                     af_obj = af_obj, parm_obj = parm_obj,
+                                                     )
             self.measurements.append(measurement)
             return measurement
         else:

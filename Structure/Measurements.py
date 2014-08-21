@@ -11,48 +11,49 @@ import treatments
 import logging
 import numpy as np
 import copy
-import scipy
+import scipy as sp
 from scipy.interpolate import interp1d, splrep
 from scipy.interpolate import UnivariateSpline
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 from pprint import pprint
-from scipy import stats
 import matplotlib
 import csv
 
 
 class Measurement(object):
-    def __init__(self, sample, mtype, mfile, machine, log=None):
+    def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
+
         if not log:
             self.log = logging.getLogger('RockPy.MEASUREMENT')
         else:
             self.log = logging.getLogger(log)
 
-        implemented = {
-            'af-demag': '',
-            'af': '',
-            'parm-spectra': '',
-            'hys': '',
-            'palint': '',
-            'zfc': '',
-            'fc': '',
-            'irm': '',
-            'coe': '',
-            'visc': '',
-            'thellier': ''
-        }
-        if mtype:
-            if mtype.lower() in implemented:
-                self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
-                self.mtype = mtype.lower()
+        implemented = ['af-demag', 'af', 'parm-spectra',
+                       'hys', 'irm', 'coe',
+                       'palint', 'thellier', 'pseudo-thellier',
+                       'zfc', 'fc',
+                       'visc',
+                       ]
+
+        if mtype.lower() in implemented:
+            self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
+            self.mtype = mtype.lower()
+            self.sample_obj = sample_obj
+            self.mfile = mfile
+
+            if machine:
                 self.machine = machine.lower()
-                self.mfile = mfile
-                self.sample = sample
+            else:
+                self.machine = None
+
+            if self.machine and self.mfile:
                 self.import_data()
             else:
-                self.log.error('UNKNOWN\t measurement type: << %s >>' % mtype)
-                return None
+                self.log.warning('NO machine or mfile passed -> no raw_data will be generated')
+        else:
+            self.log.error('UNKNOWN\t measurement type: << %s >>' % mtype)
+            return None
 
         self.treatment = None
 
@@ -68,7 +69,7 @@ class Measurement(object):
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, },
                        'simulation': {'palint': machines.simulation,
-                                      },
+                       },
                        'vftb': {'hys': machines.vftb,
                                 'coe': machines.vftb}}
 
@@ -76,7 +77,7 @@ class Measurement(object):
         self.raw_data = None
         if self.machine in implemented:
             if self.mtype in implemented[self.machine]:
-                self.raw_data = implemented[self.machine][self.mtype](self.mfile, self.sample.name)
+                self.raw_data = implemented[self.machine][self.mtype](self.mfile, self.sample_obj.name)
                 if self.raw_data == None:
                     self.log.error('IMPORTING\t did not transfer data - CHECK sample name and data file')
                     return
@@ -94,7 +95,7 @@ class Measurement(object):
         }
 
         if ttype.lower() in implemented:
-            self.treatment = implemented[ttype.lower()](self.sample, self, options)
+            self.treatment = implemented[ttype.lower()](self.sample_obj, self, options)
         else:
             self.log.error('UNKNOWN\t treatment type << %s >> is not know or not implemented' % ttype)
 
@@ -126,9 +127,9 @@ class Measurement(object):
 class Af_Demag(Measurement):
     # general.create_logger('RockPy.MEASUREMENT.af-demag')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method, **options):
         log = 'RockPy.MEASUREMENT.af-demag'
-        Measurement.__init__(self, sample, mtype, mfile, machine, log)
+        super(Af_Demag, self).__init__(sample_obj, mtype, mfile, machine, log)
         self.mag_method = mag_method
 
         try:
@@ -143,15 +144,23 @@ class Af_Demag(Measurement):
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
 
+    @property
+    def data(self):
+        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+        return out.T
+
     def plot(self):
-        RPV3plots.Af_Demag(self.sample)
+        RPV3plots.Af_Demag(self.sample_obj)
+
 
 class pARM_spectra(Measurement):
     # general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,
+                 **options):
         log = 'RockPy.MEASUREMENT.parm-spectra'
-        Measurement.__init__(self, sample, mtype, mfile, machine, log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
         try:
             self.raw_data.pop('sample')
             self.__dict__.update(self.raw_data)
@@ -160,8 +169,8 @@ class pARM_spectra(Measurement):
             self.u_window_limit = self.__dict__.pop('par3')
             self.l_window_limit = self.__dict__.pop('par4')
             self.window_size = self.__dict__.pop('par5')
-            self.windows = np.vstack((self.l_window_limit,self.u_window_limit  ))
-            self.fields = np.mean(self.windows, axis = 0)
+            self.windows = np.vstack((self.l_window_limit, self.u_window_limit  ))
+            self.fields = np.mean(self.windows, axis=0)
 
         except AttributeError:
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
@@ -170,6 +179,11 @@ class pARM_spectra(Measurement):
         except TypeError:
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
+
+    @property
+    def data(self):
+        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+        return out.T
 
     def subtract_af3(self):
         self.log.info('SUBTRACTING\t AF3 data of pARM measurement')
@@ -188,12 +202,13 @@ class pARM_spectra(Measurement):
         for k in keys:
             self.__dict__[k] = self.__dict__[k][1:]
 
+
 class Coe(Measurement):
     general.create_logger('RockPy.MEASUREMENT.COE')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
         self.log = logging.getLogger('RockPy.MEASUREMENT.COE')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
 
         ''' VSM '''
 
@@ -274,9 +289,9 @@ class Coe(Measurement):
 class Irm(Measurement):
     general.create_logger('RockPy.MEASUREMENT.IRM')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
         self.log = logging.getLogger('RockPy.MEASUREMENT.IRM')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
 
         self.fields = self.raw_data[1][0][:, 0]
         self.rem = self.raw_data[1][0][:, 1]
@@ -296,11 +311,11 @@ class Hysteresis(Measurement):
     '''
     general.create_logger('RockPy.MEASUREMENT.HYSTERESIS')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
         """
 
 
-        :param sample:
+        :param sample_obj:
         :param mtype:
         :param mfile:
         :param machine:
@@ -311,7 +326,7 @@ class Hysteresis(Measurement):
         """
 
         self.log = logging.getLogger('RockPy.MEASUREMENT.HYSTERESIS')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
 
         if machine.lower() == 'vsm':
             self.info = self.raw_data[2]
@@ -331,13 +346,13 @@ class Hysteresis(Measurement):
             self.moments = self.raw_data.get('moment')
 
 
-        ### initialize
+        # ## initialize
         self.virgin = None
         self.msi = None
         self.up_field = []
         self.down_field = []
 
-        if machine.lower()== 'vsm':
+        if machine.lower() == 'vsm':
             for i in range(len(self.fields)):
                 if self.fields[i][0] > self.fields[i][-1]:
                     self.down_field = np.column_stack((self.fields[i], self.moments[i]))
@@ -350,12 +365,12 @@ class Hysteresis(Measurement):
                         self.log.debug('FOUND\t << up_field branch >> stored as measurement.up_field [field,moment]')
                         self.up_field = np.column_stack((self.fields[i], self.moments[i]))[::-1]
 
-        if machine.lower()== 'vftb':
-            idx = np.where(np.diff(self.fields)<0)[0]
-            self.virgin = np.column_stack((self.fields[0:idx[0]+1], self.moments[0:idx[0]+1]))
+        if machine.lower() == 'vftb':
+            idx = np.where(np.diff(self.fields) < 0)[0]
+            self.virgin = np.column_stack((self.fields[0:idx[0] + 1], self.moments[0:idx[0] + 1]))
 
-            self.down_field = np.column_stack((self.fields[idx[0]:idx[-1]+2], self.moments[idx[0]:idx[-1]+2]))
-            self.up_field = np.column_stack((self.fields[idx[-1]+1:], self.moments[idx[-1]+1:]))[::-1]
+            self.down_field = np.column_stack((self.fields[idx[0]:idx[-1] + 2], self.moments[idx[0]:idx[-1] + 2]))
+            self.up_field = np.column_stack((self.fields[idx[-1] + 1:], self.moments[idx[-1] + 1:]))[::-1]
 
         self.log.debug('CALCULATING\t << irreversible >> stored in measurement.irrev [field, moment]')
 
@@ -395,6 +410,7 @@ class Hysteresis(Measurement):
 
         ''' CORRECTIONS '''
         self.paramag_corrected = False
+
     # # Energies ##
 
     def E_delta_t(self):
@@ -700,12 +716,12 @@ class Hysteresis(Measurement):
         self.paramag_corrected = True
 
     def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
-        Hys_Fabian2003(self.sample, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
+        Hys_Fabian2003(self.sample_obj, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
                                                                                                       folder=folder,
                                                                                                       name=name)
 
     def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
-        factor = {'mass': self.sample.mass(),
+        factor = {'mass': self.sample_obj.mass(),
                   'max': max(self.down_field[:, 1])}
         norm_factor = factor[norm]
 
@@ -730,9 +746,9 @@ class Hysteresis(Measurement):
 
 
 class Viscosity(Measurement):
-    def __init__(self, sample, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
         self.log = logging.getLogger('RockPy.MEASUREMENT.visc')
-        Measurement.__init__(self, sample, mtype, mfile, machine, self.log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
 
         if machine.lower() == 'vsm':
             self.info = self.raw_data[-1]
@@ -749,13 +765,13 @@ class Viscosity(Measurement):
 
     def return_fit(self):
         # todo refactor
-        print '%s \t %.3e \t %.3e \t %.3e' % (self.sample.name, self.intercept, self.slope, self.std_err)
+        print '%s \t %.3e \t %.3e \t %.3e' % (self.sample_obj.name, self.intercept, self.slope, self.std_err)
 
     def plot(self, norm='max', out='show', virgin=False, folder=None, name='output.pdf', figure=None, **kwargs):
 
         plt_field = kwargs.get('plt_field', False)
 
-        factor = {'mass': self.sample.mass(),
+        factor = {'mass': self.sample_obj.mass(),
                   'max': max(self.moments)}
 
         self.norm = norm
@@ -780,7 +796,7 @@ class Viscosity(Measurement):
         else:
             fig = figure
 
-        fig.suptitle('%s IRM viscous decay' % self.sample.name, fontsize=16)
+        fig.suptitle('%s IRM viscous decay' % self.sample_obj.name, fontsize=16)
 
         ax = fig.add_subplot(111)
         ax2 = ax.twiny()
@@ -819,7 +835,7 @@ class Viscosity(Measurement):
             plt.show()
         if out == 'save':
             if folder != None:
-                plt.savefig(folder + self.sample.name + '_' + name, dpi=300)
+                plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
 
 class Thellier(Measurement):
@@ -828,13 +844,13 @@ class Thellier(Measurement):
     '''
     # general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method=None, lab_field=35):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method=None, lab_field=35):
         log = 'RockPy.MEASUREMENT.thellier-thellier'
 
-        Measurement.__init__(self, sample, mtype, mfile, machine, log)
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         self.correction = ''
-        self.components = {'temp':0, 'x': 1, 'y': 2, 'z': 3, 'm': 4, 'time':5}
+        self.components = {'temp': 0, 'x': 1, 'y': 2, 'z': 3, 'm': 4, 'time': 5}
 
         if mfile:
             self.holder = self.raw_data['acryl']
@@ -846,7 +862,7 @@ class Thellier(Measurement):
             self.th = helper.get_type(self.raw_data, 'TH')
 
             ''' STDEVS for TH, PTRM, SUM '''
-            #initializing #todo reaad stdev from file
+            # initializing #todo reaad stdev from file
             self.th_stdev = None
             self.ptrm_stdev = None
             self.sum_stdev = None
@@ -964,7 +980,7 @@ class Thellier(Measurement):
             out.append([d_ck, th_i, ptrm_j, th_j])
 
         # for i in out:
-        #     print i[0][0], i[1][0], i[2][0], i[3][0]
+        # print i[0][0], i[1][0], i[2][0], i[3][0]
         #     print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
@@ -998,7 +1014,7 @@ class Thellier(Measurement):
 
             out.append([d_ac, th_i, ptrm_j, th_j])
         # for i in out:
-        #     print i[0][0], i[1][0], i[2][0], i[3][0]
+        # print i[0][0], i[1][0], i[2][0], i[3][0]
         #     print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
@@ -1607,12 +1623,12 @@ class Thellier(Measurement):
     def fit_degree2(self, component='m'):
         from scipy.optimize import fmin
 
-        idx = self.components[component]-1
+        idx = self.components[component] - 1
         slope = self.slope()[idx]
         # parametric function, x is the independent variable
         # and c are the parameters.
         # it's a polynomial of degree 2
-        fp = lambda c, x: c[0] + slope * x + c[2] * x**2
+        fp = lambda c, x: c[0] + slope * x + c[2] * x ** 2
 
         # error function to minimize
         e = lambda p, x, y: (abs((fp(p, x) - y))).sum()
@@ -1632,7 +1648,7 @@ class Thellier(Measurement):
 
         xx = np.linspace(0, max(x), 100)
         plt.plot(x, y, 'bo',
-             xx, fp(p, xx), 'r',
+                 xx, fp(p, xx), 'r',
         )
         plt.show()
 
@@ -1650,15 +1666,15 @@ class Thellier(Measurement):
             folder = expanduser("~") + '/Desktop/'
 
         ADD = {'TH': 0, 'PT': 0.1, 'CK': 0.2, 'TR': 0.3, 'AC': 0.4, 'NRM': 0}
-        output = csv.writer(open(str(folder) + '%s' % self.sample.name + name + '.tdt', 'wb'), delimiter='\t')
+        output = csv.writer(open(str(folder) + '%s' % self.sample_obj.name + name + '.tdt', 'wb'), delimiter='\t')
 
         for i in range(len(self.raw_data['time'])):
             if not self.raw_data['type'][i] in ['TRM']:
                 sample_t = self.raw_data['step'][i] + ADD[self.raw_data['type'][i]]
-                sample_m = self.raw_data['m'][i] / self.sample.volume(length_unit='m')
+                sample_m = self.raw_data['m'][i] / self.sample_obj.volume(length_unit='m')
                 sample_d = self.raw_data['dc'][i]
                 sample_i = self.raw_data['ic'][i]
-                out = [self.sample.name, sample_t, sample_m, sample_d, sample_i]
+                out = [self.sample_obj.name, sample_t, sample_m, sample_d, sample_i]
                 output.writerow(out)
 
     def print_table(self, type='th', **options):
@@ -1671,11 +1687,10 @@ class Thellier(Measurement):
 
 
 class Zfc_Fc(Measurement):
-    general.create_logger('RockPy.MEASUREMENT.zfc-fc')
 
-    def __init__(self, sample, mtype, mfile, machine, mag_method='IRM'):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.zfc-fc')
-        super(Zfc_Fc, self).__init__(sample, mtype, mfile, machine, self.log)
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method='IRM'):
+        log = 'RockPy.MEASUREMENT.zfc-fc'
+        super(Zfc_Fc, self).__init__(sample_obj, mtype, mfile, machine, log)
         self.mag_method = mag_method
         self.cooling_data = {key: self.raw_data[key][0] for key in self.raw_data.keys()}
         self.warming_data = {key: self.raw_data[key][1] for key in self.raw_data.keys()}
@@ -1725,7 +1740,7 @@ class Zfc_Fc(Measurement):
             xy = self.get_data(direction=direction, norm=norm, norm2=norm2)
 
             plot = plt.plot(xy[10:, 0], xy[10:, 1],
-                            label=self.sample.name + ' ' + direction + '\t %.1fT' % (self.field),
+                            label=self.sample_obj.name + ' ' + direction + '\t %.1fT' % (self.field),
                             linestyle=line[direction])
             if option == 'show':
                 plt.ylabel(y_label)
@@ -1791,3 +1806,24 @@ class Zfc_Fc(Measurement):
         out = xy[idx]
         self.log.info('FOUND moment of T(%.2f)|M=%.3e' % (out[0], out[1]))
         return out
+
+
+class Pseudo_Thellier(Measurement):
+
+        def __init__(self, sample_obj,
+                     af_obj, parm_obj,
+                     mtype=None, mfile=None, machine=None,
+                     **options):
+            log = 'RockPy.MEASUREMENT.pseudo-thellier'
+            Measurement.__init__(self, sample_obj, mtype, mfile, machine, log=log, **options)
+
+            parm_obj.subtract_af3()
+            parm_data = parm_obj.data
+
+            self.components = {'fields':0, 'x':1 , 'y':2, 'z',3, 'm':4}
+
+            self.parm = np.column_stack((parm_obj.u_window_limit, np.array([np.sum(parm_data[:i,:], axis=0) for i in range(len(parm_data))])[:,1:]))
+            self.nrm = np.array([af_obj.data[i] for i in range(len(af_obj.data)) if af_obj.data[i][0] in self.parm[:,0]])
+
+        def plot(self, component = 'm'):
+            pass

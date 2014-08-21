@@ -80,6 +80,8 @@ def sushibar(file, sample, *args, **options):
             for j in range(len(out[i])):
                 if out[i][j] == 'None':
                     out[i][j] = '0'
+                if out[i][j] == '-':
+                    out[i][j] = np.nan
             try:
                 out[i] = np.array(map(float, out[i]))
             except ValueError:
@@ -88,6 +90,9 @@ def sushibar(file, sample, *args, **options):
     out['run'] = map(int, out['run'])
 
     def time_conv(t):
+        if t == '-':
+            return None
+
         return time.strptime(t[:19], "%Y-%m-%d %H:%M:%S")
 
     out['time'] = map(time_conv, out['time'])
