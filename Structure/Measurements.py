@@ -1,12 +1,14 @@
 # coding=utf-8
 __author__ = 'Mike'
+
 from RockPyV3.Functions import general
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
+
 import RockPyV3.Plots.general as RPplt
 from RockPyV3.Plots import hysteresis, viscotity
 from RockPyV3.Paleointensity import statistics
-import treatments
+import treatments, data
 import logging
 import numpy as np
 import scipy as sp
@@ -16,7 +18,7 @@ from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 import csv
 
-#data [variable, x,y,z,m, (time)]
+# data [variable, x,y,z,m, (time)]
 class Measurement(object):
     def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
 
@@ -64,7 +66,7 @@ class Measurement(object):
                                     'af': machines.sushibar,
                                     'parm-spectra': machines.sushibar,
                                     'nrm': machines.sushibar,  # externally applied magnetization
-                                    'trm': machines.sushibar,  #externally applied magnetization
+                                    'trm': machines.sushibar,  # externally applied magnetization
                                     'irm': machines.sushibar,  #externally applied magnetization
                                     'arm': machines.sushibar,  #externally applied magnetization
         },
@@ -174,7 +176,8 @@ class Measurement(object):
             self.log.warning('RETURNING NON NORMALIZED data-type << %s >>' % dtype)
             return data
 
-#data [af_field, x,y,z,m]
+
+# data [af_field, x,y,z,m]
 class Af_Demag(Measurement):
     def __init__(self, sample_obj,
                  mtype, mfile, machine,  # standard
@@ -200,11 +203,16 @@ class Af_Demag(Measurement):
 
     @property
     def data(self):
-        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
-        return out.T
+        measurement = np.c_[self.x, self.y, self.z]
+        out = data.data(self.fields, measurement)
+        return out
+    # def data(self):
+    #     out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+    #     return out.T
 
     def plot(self):
         RPplt.Af_Demag(self.sample_obj)
+
 
 #data [af_field, x,y,z,m]
 class pARM_spectra(Measurement):
@@ -257,6 +265,7 @@ class pARM_spectra(Measurement):
             self.__dict__[k] = self.__dict__[k][1:]
 
 
+#data #todo find Coe data structure
 class Coe(Measurement):
     def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
         log = 'RockPy.MEASUREMENT.COE'
@@ -341,6 +350,7 @@ class Coe(Measurement):
         return out
 
 
+#data #todo find Irm data structure
 class Irm(Measurement):
     general.create_logger('RockPy.MEASUREMENT.IRM')
 
@@ -356,6 +366,7 @@ class Irm(Measurement):
         self.direct_moment = np.column_stack((self.fields, self.dmom))
 
 
+#data #todo find Hysteresis data structure
 class Hysteresis(Measurement):
     '''
     A subclass of the measurement class. It devides the raw_data give into an **down_field** and **up_field** branch.
@@ -695,7 +706,8 @@ class Hysteresis(Measurement):
         ms_sigm = np.std([abs(df_max), abs(uf_max), abs(df_min), abs(uf_min)])
 
         self.log.info(
-            'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (df_max, df_min, uf_max, uf_min, float(ms)))
+            'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (
+                df_max, df_min, uf_max, uf_min, float(ms)))
 
         if df_max / df_min >= 0.1 or df_min / df_max >= 0.1:
             print 'test'
@@ -892,14 +904,18 @@ class Viscosity(Measurement):
             if folder is not None:
                 plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
-
+#data #todo find Thellier data structure
 class Thellier(Measurement):
     '''
 
     '''
     # general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
 
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method='', lab_field=35, **options):
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,
+                 mag_method='',
+                 lab_field=35,
+                 **options):
         log = 'RockPy.MEASUREMENT.thellier-thellier'
 
         Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
@@ -915,6 +931,7 @@ class Thellier(Measurement):
 
             # get_type gives - T, x, y, z, m
             self.th = helper.get_type(self.raw_data, 'TH')
+            test = data.data(self.th[:,0], self.th[:,1], self.th[:,5])
 
             ''' STDEVS for TH, PTRM, SUM '''
             # initializing #todo reaad stdev from file
@@ -1366,7 +1383,8 @@ class Thellier(Measurement):
         '''
         self.log.debug('CALCULATING\t scatter parameter')
         if t_min != 20 or t_max != 700:
-            slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(component=component, t_min=t_min, t_max=t_max)
+            slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(component=component, t_min=t_min,
+                                                                            t_max=t_max)
         else:
             slope, sigma, intercept = self.slope, self.sigma, self.intercept
         scatter = sigma / abs(slope)
@@ -1881,7 +1899,8 @@ class Pseudo_Thellier(Measurement):
         self.nrm = af_obj.data[0, :]
 
         self.parm = np.column_stack((
-        parm_obj.u_window_limit, np.array([np.sum(parm_data[:i, :], axis=0) for i in range(len(parm_data))])[:, 1:]))
+            parm_obj.u_window_limit,
+            np.array([np.sum(parm_data[:i, :], axis=0) for i in range(len(parm_data))])[:, 1:]))
         self.af = np.array([af_obj.data[i] for i in range(len(af_obj.data)) if af_obj.data[i][0] in self.parm[:, 0]])
 
         self.sum = np.c_[self.parm[:, 0], self.parm[:, 1:] + self.af[:, 1:]]
