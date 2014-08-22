@@ -34,7 +34,7 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
             color=std.get_color())
 
     if hys_obj.paramag_corrected:
-        ax.text(1, 1, 'paramagnetic corrected: $\\chi_{p}=%.2e$' % (hys_obj.paramag_sus),
+        ax.text(1, 1, 'paramagnetic corrected: $\\chi_{p}=%.2e$' % hys_obj.paramag_sus,
                 horizontalalignment='right',
                 verticalalignment='bottom',
                 # fontsize=8,
@@ -47,7 +47,7 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
@@ -55,7 +55,7 @@ def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='outpu
     '''
     ''' VIRGIN '''
 
-    if hys_obj.virgin != None:
+    if hys_obj.virgin is not None:
         ax.plot(hys_obj.virgin[:, 0], hys_obj.virgin[:, 1] / norm_factor, color='#808080')
 
     if out == 'show':
@@ -63,7 +63,7 @@ def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='outpu
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
@@ -80,7 +80,7 @@ def plot_mrs_shift(hys_obj, ax, norm_factor=1, out='show', folder=None, name='ou
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_rev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
@@ -94,7 +94,7 @@ def plot_rev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_irrev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
@@ -108,7 +108,7 @@ def plot_irrev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
@@ -126,13 +126,13 @@ def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, na
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
 
 def add_virgin_info(hys_obj, ax, norm_factor=1):
-    if hys_obj.virgin != None:
+    if hys_obj.virgin is not None:
         mn = ax.get_xlim()[0]
         mn -= 0.2 * mn
 
@@ -166,7 +166,7 @@ def fill_hys(hys_obj, ax=None, norm_factor=1):
 
 
 def fill_virgin(hys_obj, ax=None, norm_factor=1):
-    if hys_obj.virgin != None:
+    if hys_obj.virgin is not None:
         vlen = len(hys_obj.virgin)
 
         ax.fill_between(hys_obj.virgin[:, 0][::-1], hys_obj.down_field[0:vlen, 1] / norm_factor,
@@ -201,7 +201,7 @@ def add_bcr_line(hys_obj,ax, norm_factor = 1, text=False):
 
 
 def add_mdf_line(hys_obj,ax, norm_factor = 1):
-    if ax == None:
+    if ax is None:
         ax = self.ax
     MDF_line = lines.Line2D([[-2, 2]], [0.5 * max(hys_obj.irr[:, 1] / norm_factor),
                                         0.5 * max(hys_obj.irr[:, 1] / norm_factor)],

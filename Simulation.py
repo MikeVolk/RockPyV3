@@ -6,13 +6,17 @@ import matplotlib.pyplot as plt
 
 
 class Simulation(object):
-    def __init__(self, parameters={}):
+    def __init__(self, parameters=None):
+        if not parameters: parameters = {}
         self.parameters = parameters
 
 
 class Sim_Thellier(Simulation):
-    def __init__(self, blocking_params={}, aniso_params={}, errors={}, **options):
+    def __init__(self, blocking_params=None, aniso_params=None, errors=None, **options):
 
+        if not blocking_params: blocking_params = {}
+        if not aniso_params: aniso_params = {}
+        if not errors: errors = {}
         super(Sim_Thellier, self).__init__()
 
         default_blocking_params = {'lab_field': 35.0,

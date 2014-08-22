@@ -1,6 +1,6 @@
 __author__ = 'mike'
 
-def plot_visc(visc_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf', plt_opt={}):
+def plot_visc(visc_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf', plt_opt=None):
     '''
     Main plotting of a hysteresis.
     :param visc_obj: hysteresis object
@@ -23,6 +23,7 @@ def plot_visc(visc_obj, ax, norm_factor=1, out='show', folder=None, name='output
         markerstyle
         alpha
     '''
+    if not plt_opt: plt_opt = {}
 
     # ax.axhline(0, color='#555555') # 0 line horizontally
     # ax.axvline(0, color='#555555') # 0 line vertically
@@ -42,7 +43,7 @@ def plot_visc(visc_obj, ax, norm_factor=1, out='show', folder=None, name='output
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
@@ -75,12 +76,12 @@ def plot_log_visc(visc_obj, ax, norm_factor=1, out='show', folder=None, name='ou
     if out == 'rtn':
         return ax
     if out == 'save':
-        if folder != None:
+        if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
 def add_label(visc_object, ax=None, log=True):
-    if visc_object.norm == None:
+    if visc_object.norm is None:
         ax.set_ylabel('Magnetic Moment $Am^2$')
     if visc_object.norm == 'mass':
         ax.set_ylabel('Magnetic Moment $Am^2/kg$')

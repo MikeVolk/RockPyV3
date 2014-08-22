@@ -5,7 +5,7 @@ import math
 from scipy.special import erf, erfc
 import matplotlib.pyplot as plt
 from scipy import pi, sqrt, exp
-import scipy.integrate as int
+import scipy.integrate as sp_int
 
 
 def normal(x, parameters, dfunc='pdf', *args, **kwargs):
@@ -80,7 +80,7 @@ def normal_skew(x, parameters, dfunc='pdf', reverse = False, check=False, *args,
 
     if dfunc == 'cdf':
         # log.info('INTEGRATING < NOTE: numerical integration: check consistency >')
-        y_int = int.cumtrapz(out_pdf, x, initial = 0)
+        y_int = sp_int.cumtrapz(out_pdf, x, initial = 0)
         if reverse:
             y_int = max(y_int) - y_int
 

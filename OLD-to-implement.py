@@ -1,3 +1,4 @@
+# coding=utf-8
 __author__ = 'mike'
 def __get_M(self, step='th'):
     implemented = {'th': self.th,

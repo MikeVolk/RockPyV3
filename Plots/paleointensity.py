@@ -202,10 +202,8 @@ def add_ac_check(palint_object, ax, component='m', norm=None,
         ax.plot(ac_i, th_i, 's', markeredgecolor=colors[plt_idx], markerfacecolor='w', linewidth=2)
 
 
-def add_ck_check(palint_object, ax, component='m', norm=None,
-                 norm_factor=[1, 1],
-                 plt_idx=0, plt_opt={},
-                 **options):
+def add_ck_check(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_idx=0, plt_opt=None, **options):
+    if not plt_opt: plt_opt = {}
     colors = helper.get_colors()
     idx = palint_object.components[component]
     check_data = palint_object._get_ck_data()

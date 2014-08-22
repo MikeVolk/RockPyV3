@@ -9,9 +9,9 @@ from pprint import pprint
 import logging
 
 
-def sushibar_old(file, sample=None):
+def sushibar_old(d_file, sample=None):
     log = logging.getLogger('RockPy.READIN')
-    log.info('IMPORTING\t automag file: << %s >>' % (file))
+    log.info('IMPORTING\t automag file: << %s >>' % d_file)
     header = {
         'sample': [0, str], 'site': [1, str], 'type': [2, str], 'run': [3, int], 'time': [4, str],
         'x': [5, float], 'y': [6, float], 'z': [7, float],
@@ -25,7 +25,7 @@ def sushibar_old(file, sample=None):
         'hade': [32, float], 'dipdir': [33, float], 'dip': [34, float]
     }
     # print [i for i in header if header[i][1]==float]
-    reader_object = csv.reader(open(file, 'rU'), delimiter='\t')
+    reader_object = csv.reader(open(d_file, 'rU'), delimiter='\t')
     aux = [i for i in reader_object][1:]
     for i in range(len(aux)):
         for j in range(len(aux[i])):
@@ -55,7 +55,7 @@ def sushibar_old(file, sample=None):
 
 def sushibar(file, sample, *args, **options):
     log = logging.getLogger('RockPy.READIN.sushibar')
-    log.info('IMPORTING\t automag file: << %s >>' % (file))
+    log.info('IMPORTING\t automag file: << %s >>' % file)
 
     floats = ['dspin', 'ispin', 'par1', 'dip', 'dipdir', 'geoaz', 'm', 'strat_level', 'a95', 'par5', 'par4', 'par3', 'par2', 'sm', 'par6', 'dg', 'is', 'hade', 'dc', 'npos', 'bl diff/sample', 'y', 'x', 'ic', 'z', 'ds', 'ig']
 
@@ -103,7 +103,7 @@ def sushibar(file, sample, *args, **options):
 
 def cryo_nl(file, sample=None):
     log = logging.getLogger('RockPy.READIN.CRYO_NL')
-    log.info('IMPORTING\t cryomag file: << %s >>' % (file))
+    log.info('IMPORTING\t cryomag file: << %s >>' % file)
     header = {
         'sample': [0, str],
         # 'coreaz': [1, float], 'coredip': [2, float], 'bedaz': [3, float], 'beddip': [4, float],
@@ -127,7 +127,7 @@ def cryo_nl(file, sample=None):
         # 'ds': [22, float], 'is': [23, float],
     }
 
-    data = helper.import_file(file=file, header_skip=1)
+    data = helper.import_file(d_file=file, header_skip=1)
     file_header = data[0]
 
     if 'mode' not in file_header:
@@ -168,7 +168,7 @@ def cryo_nl(file, sample=None):
 
 def cryo_nl2(file, sample, *args, **options):
     log = logging.getLogger('RockPy.READIN.CRYO_NL')
-    log.info('IMPORTING\t cryomag file: << %s >>' % (file))
+    log.info('IMPORTING\t cryomag file: << %s >>' % file)
 
     floats = ['x', 'y', 'z', 'm', 'sm', 'a95', 'dc', 'ic', 'dg', 'ig', 'ds', 'is']
     data_f = open(file)
@@ -238,7 +238,7 @@ def readMicroMagHeader(lines):
 
 def vsm(file, sample=None):
     log = logging.getLogger('RockPy.READIN.vsm')
-    log.info('IMPORTING\t VSM file: << %s >>' % (file))
+    log.info('IMPORTING\t VSM file: << %s >>' % file)
     file = open(file, 'rU')
     reader_object = file.readlines()
     header = readMicroMagHeader(reader_object)  # get header
@@ -277,7 +277,7 @@ def mpms(files, sample=None):
     for file in files:
         out_aux = {}
         log = logging.getLogger('RockPy.READIN.mpms')
-        log.info('IMPORTING\t MPMS file: << %s >>' % (file))
+        log.info('IMPORTING\t MPMS file: << %s >>' % file)
         reader_object = csv.reader(open(file), delimiter=',')
         header = {'Time': [0, float], 'Comment': [1, str], 'Field (Oe)': [2, float], 'Temperature (K)': [3, float],
                   'Long Moment (emu)': [4, float], 'Long Scan Std Dev': [5, float], 'Long Offset (cm)': [6, float],
@@ -309,7 +309,7 @@ def vftb(file, *args, **options):
     '''
     '''
     log = logging.getLogger('RockPy.READIN.vftb')
-    log.info('IMPORTING\t VFTB file: << %s >>' % (file))
+    log.info('IMPORTING\t VFTB file: << %s >>' % file)
     reader_object = open(file)
     out = [i.strip('\r\n').split('\t') for i in reader_object.readlines()]
     mass = float(out[0][1].split()[1])

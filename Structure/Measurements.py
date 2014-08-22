@@ -9,14 +9,11 @@ from RockPyV3.Paleointensity import statistics
 import treatments
 import logging
 import numpy as np
-import copy
 import scipy as sp
 from scipy.interpolate import interp1d, splrep
 from scipy.interpolate import UnivariateSpline
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
-from pprint import pprint
-import matplotlib
 import csv
 
 #data [variable, x,y,z,m, (time)]
@@ -92,7 +89,7 @@ class Measurement(object):
         if machine in implemented:
             if mtype in implemented[machine]:
                 raw_data = implemented[machine][mtype](mfile, self.sample_obj.name)
-                if raw_data == None:
+                if raw_data is None:
                     self.log.error('IMPORTING\t did not transfer data - CHECK sample name and data file')
                     return
                 else:
@@ -102,14 +99,14 @@ class Measurement(object):
                     else:
                         self.raw_data = raw_data
             else:
-                self.log.error('IMPORTING UNKNOWN\t measurement type << %s >>' % (self.mtype))
+                self.log.error('IMPORTING UNKNOWN\t measurement type << %s >>' % self.mtype)
         else:
-            self.log.error('UNKNOWN\t machine << %s >>' % (self.machine))
+            self.log.error('UNKNOWN\t machine << %s >>' % self.machine)
 
     def add_initial_state(self,
                           mtype, mfile, machine,  # standard
                           **options):
-        self.log.info(' ADDING  initial state to measurement << %s >> data' % (self.mtype))
+        self.log.info(' ADDING  initial state to measurement << %s >> data' % self.mtype)
         self.is_raw_data = self.import_data(machine=machine, mfile=mfile, mtype=mtype, rtn_raw_data=True)
         components = ['x', 'y', 'z', 'm']
         self.initial_state = np.array([self.is_raw_data[i] for i in components])
@@ -117,7 +114,7 @@ class Measurement(object):
 
     def add_treatment(self, ttype, options=None):
         self.ttype = ttype.lower()
-        self.log.info('ADDING\t treatment to measurement << %s >>' % (self.ttype))
+        self.log.info('ADDING\t treatment to measurement << %s >>' % self.ttype)
 
         implemented = {
             'pressure': treatments.Pressure,
@@ -129,7 +126,7 @@ class Measurement(object):
             self.log.error('UNKNOWN\t treatment type << %s >> is not know or not implemented' % ttype)
 
     def interpolate(self, what, x_new=None):
-        self.log.info('INTERPOLATIN << %s >> using interp1d (Scipy)' % (what))
+        self.log.info('INTERPOLATIN << %s >> using interp1d (Scipy)' % what)
         xy = np.sort(getattr(self, what), axis=0)
         mtype = getattr(self, 'mtype')
 
@@ -139,7 +136,7 @@ class Measurement(object):
         x = xy[:, 0]
         y = xy[:, 1]
 
-        if x_new == None:
+        if x_new is None:
             x_new = np.linspace(min(x), max(x), 5000)
 
         fc = splrep(x, y, s=0)
@@ -331,9 +328,9 @@ class Coe(Measurement):
         if check:
             plt.axhline(color='k')
             plt.axvline(color='k')
-            plt.plot(10 ** (log_fields) * 1000, self.rem, '.-', label='data')
+            plt.plot(10 ** log_fields * 1000, self.rem, '.-', label='data')
             # plt.plot(10**(tanh_fit.fit_x) *1000,tanh_fit.fit_y, label ='tanh fit')
-            plt.plot(10 ** (log_norm_fit.fit_x) * 1000, log_norm_fit.fit_y + min(self.remanence[:, 1]),
+            plt.plot(10 ** log_norm_fit.fit_x * 1000, log_norm_fit.fit_y + min(self.remanence[:, 1]),
                      label='log_norm fit')
             plt.xlabel('log(Field)')
             plt.ylabel('Moment')
@@ -454,7 +451,7 @@ class Hysteresis(Measurement):
         # ## check for msi branch ###
         # ## msi is found, if the first virgin value is 0.9*mrs ###
 
-        if self.virgin != None:
+        if self.virgin is not None:
 
             self.mrs_msi = self.virgin[0, 1] / self.mrs[0]
 
@@ -462,9 +459,9 @@ class Hysteresis(Measurement):
                 self.log.debug('FOUND\t << Msi branch >> saved as measurement.msi [field,moment]')
                 self.msi = self.virgin
             else:
-                self.log.error('NO\t << Msi branch >> FOUND\t virgin(0)/MRS\t value: %.2f' % (self.mrs_msi))
+                self.log.error('NO\t << Msi branch >> FOUND\t virgin(0)/MRS\t value: %.2f' % self.mrs_msi)
 
-            self.log.debug('MSI/MRS\t value: %.2f' % (self.mrs_msi))
+            self.log.debug('MSI/MRS\t value: %.2f' % self.mrs_msi)
 
         ''' CORRECTIONS '''
         self.paramag_corrected = False
@@ -476,7 +473,7 @@ class Hysteresis(Measurement):
         Method calculates the :math:`E^{\Delta}_t` value for the hysteresis.
         It uses scipy.integrate.simps for calculation of the area under the down_field branch for positive fields and later subtracts the area under the Msi curve.
         '''
-        if self.msi != None:
+        if self.msi is not None:
             df_positive = np.array([i for i in self.down_field if i[0] > 0])[::-1]
             df_energy = scipy.integrate.simps(df_positive[:, 1], x=df_positive[:, 0])
             virgin_energy = scipy.integrate.simps(self.msi[:, 1], x=self.msi[:, 0])
@@ -530,7 +527,7 @@ class Hysteresis(Measurement):
         out = np.vstack((np.log10(M_dashdash[:, 0]), np.log10(np.fabs(M_dashdash[:, 1])))).T
 
         aux = np.array([i for i in out if i[0] > -0.7 if i[0] <= 0. if not np.isnan(i[1])])
-        aux2 = np.array([i for i in out2 if i[0] > -1 if i[0] <= 0. if not np.isnan(i[1])])
+        # aux2 = np.array([i for i in out2 if i[0] > -1 if i[0] <= 0. if not np.isnan(i[1])])
         self.log.info('CALCULATING SLOPE\t in range -1:0')
         self.log.warning('SLOPE\t could be wrong, check with check option!')
 
@@ -698,7 +695,7 @@ class Hysteresis(Measurement):
         ms_sigm = np.std([abs(df_max), abs(uf_max), abs(df_min), abs(uf_min)])
 
         self.log.info(
-            'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (df_max, df_min, uf_max, uf_min, ms))
+            'CALCULATING\t Ms: df:(%.2e,%.2e), uf:(%.2e,%.2e), mean: %.2e' % (df_max, df_min, uf_max, uf_min, float(ms)))
 
         if df_max / df_min >= 0.1 or df_min / df_max >= 0.1:
             print 'test'
@@ -749,7 +746,7 @@ class Hysteresis(Measurement):
         self.down_field[:, 1] -= self.down_field[:, 0] * slope
         self.up_field[:, 1] -= self.up_field[:, 0] * slope
 
-        if self.virgin != None:
+        if self.virgin is not None:
             self.virgin[:, 1] -= self.virgin[:, 0] * slope
         if self.msi:
             self.msi[:, 1] -= self.msi[:, 0] * slope
@@ -775,15 +772,15 @@ class Hysteresis(Measurement):
 
     def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
         RPplt.Hys_Fabian2003(self.sample_obj, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
-                                                                                                                folder=folder,
-                                                                                                                name=name)
+                                                                                                                folder=folder
+        )
 
     def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
         factor = {'mass': self.sample_obj.mass(),
                   'max': max(self.down_field[:, 1])}
         norm_factor = factor[norm]
 
-        if figure == None:
+        if figure is None:
             fig = plt.figure()
         else:
             fig = figure
@@ -792,14 +789,14 @@ class Hysteresis(Measurement):
 
         hysteresis.plot_hys(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
 
-        if self.virgin != None and virgin:
+        if self.virgin is not None and virgin:
             hysteresis.plot_virgin(hys_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
         if out == 'rtn':
             return fig
         if out == 'show':
             plt.show()
         if out == 'save':
-            if folder != None:
+            if folder is not None:
                 plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
 
@@ -847,7 +844,7 @@ class Viscosity(Measurement):
                   'axes.unicode_minus': True}
         plt.rcParams.update(params)
 
-        if figure == None:
+        if figure is None:
             fig = plt.figure(figsize=(11.69, 8.27))
             plt.subplots_adjust(left=0.08, bottom=None, right=0.94, top=0.87,
                                 wspace=None, hspace=None)
@@ -892,7 +889,7 @@ class Viscosity(Measurement):
         if out == 'show':
             plt.show()
         if out == 'save':
-            if folder != None:
+            if folder is not None:
                 plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
 
@@ -927,7 +924,7 @@ class Thellier(Measurement):
 
             types = list(set(self.raw_data['type']))
 
-            if self.nrm != None:
+            if self.nrm is not None:
                 self.th = np.vstack((self.nrm, self.th))
 
             # check if trm if not replace with NRM for P0 steps
@@ -935,10 +932,10 @@ class Thellier(Measurement):
                 self.trm = np.array([self.th[0]])
                 self.nrm = np.array([self.th[0]])
 
-            if self.trm == None:
+            if self.trm is None:
                 self.trm = self.nrm
 
-            if self.nrm == None:
+            if self.nrm is None:
                 self.nrm = self.trm
 
             if self.trm[:, 0] == 0:
@@ -958,13 +955,13 @@ class Thellier(Measurement):
 
         self.lab_field = lab_field
 
-    def get_data(self, step, type):
+    def get_data(self, step, dtype):
         if step not in self.__dict__.keys():
-            self.log.error('CANT FIND\t << %s >> in data' % (step))
+            self.log.error('CANT FIND\t << %s >> in data' % step)
         types = {'temps': 0,
                  'x': 1, 'y': 2, 'z': 3,
                  'm': 4}
-        out = getattr(self, step)[:, types[type]]
+        out = getattr(self, step)[:, types[dtype]]
         return out
 
     def _get_th_ptrm_data(self, t_min=20, t_max=700, **options):
@@ -1369,7 +1366,7 @@ class Thellier(Measurement):
         '''
         self.log.debug('CALCULATING\t scatter parameter')
         if t_min != 20 or t_max != 700:
-            slope, sigma, intercept = self.calculate_slope(component=component, t_min=t_min, t_max=t_max)
+            slopes, sigmas, y_intercept, x_intercept = self.calculate_slope(component=component, t_min=t_min, t_max=t_max)
         else:
             slope, sigma, intercept = self.slope, self.sigma, self.intercept
         scatter = sigma / abs(slope)
@@ -1718,7 +1715,7 @@ class Thellier(Measurement):
         :param folder:
         :param name:
         """
-        if folder == None:
+        if folder is None:
             from os.path import expanduser
 
             folder = expanduser("~") + '/Desktop/'
@@ -1735,9 +1732,9 @@ class Thellier(Measurement):
                 out = [self.sample_obj.name, sample_t, sample_m, sample_d, sample_i]
                 output.writerow(out)
 
-    def print_table(self, type='th', **options):
-        if type in ['th', 'sum', 'ptrm', 'pt', 'ck', 'ac', 'tr']:
-            for i in getattr(self, type):
+    def print_table(self, step='th', **options):
+        if step in ['th', 'sum', 'ptrm', 'pt', 'ck', 'ac', 'tr']:
+            for i in getattr(self, step):
                 print i[0], '\t', i[1], '\t', i[2], '\t', i[3]
 
     def dunlop(self, component='m'):
@@ -1781,23 +1778,23 @@ class Zfc_Fc(Measurement):
         }
 
         if type(norm) == float or type(norm) == int:
-            y_label = 'M(T)/M(T=%i)' % (norm)
+            y_label = 'M(T)/M(T=%i)' % norm
             if type(norm2) == float or type(norm2) == int:
-                y_label += '-M(T=%i)' % (norm2)
+                y_label += '-M(T=%i)' % norm2
         else:
             if type(norm2) == float or type(norm2) == int:
-                y_label = 'M(T)-M(T=%i)' % (norm2)
+                y_label = 'M(T)-M(T=%i)' % norm2
             else:
-                if norm != None:
+                if norm is not None:
                     y_label = y_label[norm]
                 else:
                     y_label = 'Am^2'
         if direction in implemented:
-            self.log.info('PLOTTING\t %s curve' % (direction))
+            self.log.info('PLOTTING\t %s curve' % direction)
             xy = self.get_data(direction=direction, norm=norm, norm2=norm2)
 
             plot = plt.plot(xy[10:, 0], xy[10:, 1],
-                            label=self.sample_obj.name + ' ' + direction + '\t %.1fT' % (self.field),
+                            label=self.sample_obj.name + ' ' + direction + '\t %.1fT' % self.field,
                             linestyle=line[direction])
             if option == 'show':
                 plt.ylabel(y_label)
@@ -1857,7 +1854,7 @@ class Zfc_Fc(Measurement):
         return xy
 
     def get_M_T(self, temperature, direction='cooling'):
-        self.log.info('GETTING moment of T(%i)' % (temperature))
+        self.log.info('GETTING moment of T(%i)' % temperature)
         xy = getattr(self, direction)
         idx = np.argmin(abs(xy[:, 0] - temperature))
         out = xy[idx]

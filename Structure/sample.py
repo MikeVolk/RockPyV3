@@ -233,7 +233,7 @@ class TTGroup(SampleGroup):
         treatments = self.get_treatment_for_mtype(mtype='thellier')
         if not '.csv' in name:
             name +='.csv'
-        if folder == None:
+        if folder is None:
             from os.path import expanduser
             folder = expanduser("~") + '/Desktop/'
 
@@ -323,7 +323,8 @@ class TTGroup(SampleGroup):
 
         return TT_obj
 
-    def plot_dunlop(self, component='m', show_std=True, out='show', plt_opt={}):
+    def plot_dunlop(self, component='m', show_std=True, out='show', plt_opt=None):
+        if not plt_opt: plt_opt = {}
         colors = get_colors()
         components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
         idx = components[component]
@@ -516,7 +517,7 @@ class Sample():
             self.measurements.append(measurement)
             return measurement
         else:
-            self.log.error(' << %s >> not implemented, yet' % (mtype))
+            self.log.error(' << %s >> not implemented, yet' % mtype)
 
 
     ''' RETURN FUNCTIONS '''
@@ -608,16 +609,16 @@ def sample_import(sample_file, mass_unit='mg', length_unit='mm'):
     '''
     log = logging.getLogger('RockPy.READIN.get_data')
     reader_object = csv.reader(open(sample_file), delimiter='\t')
-    list = [i for i in reader_object]
-    header = list[0]
+    r_list = [i for i in reader_object]
+    header = r_list[0]
 
-    dict = {i[0]: {header[j].lower(): float(i[j]) for j in range(1, len(i))} for i in list[1:]}
+    d_dict = {i[0]: {header[j].lower(): float(i[j]) for j in range(1, len(i))} for i in r_list[1:]}
 
     out = {}
-    for sample in dict:
-        mass = dict[sample].get('mass', None)
-        height = dict[sample].get('height', None)
-        diameter = dict[sample].get('diameter', None)
+    for sample in d_dict:
+        mass = d_dict[sample].get('mass', None)
+        height = d_dict[sample].get('height', None)
+        diameter = d_dict[sample].get('diameter', None)
         aux = {sample: Sample(sample, mass=mass, height=height, diameter=diameter, mass_unit=mass_unit,
                               length_unit=length_unit)}
         out.update(aux)

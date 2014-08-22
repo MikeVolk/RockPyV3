@@ -54,7 +54,7 @@ class Plot(object):
 
         self.name = name
 
-        if folder == None:
+        if folder is None:
             from os.path import expanduser
             folder = expanduser("~") + '/Desktop/'
 
@@ -195,7 +195,7 @@ class PARM_spectra(Plot):
                 norm_factor = factor[self.norm]
 
                 self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
-                self.log.info('PLOT\t of: %s' % (sample.name))
+                self.log.info('PLOT\t of: %s' % sample.name)
 
                 x = measurement.fields
                 y = measurement.m / norm_factor
@@ -223,7 +223,7 @@ class IRM(Plot):
                           None: 1}
                 norm_factor = factor[self.norm]
                 self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
-                self.log.info('PLOT\t of: %s' % (sample.name))
+                self.log.info('PLOT\t of: %s' % sample.name)
 
                 std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
                 self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
@@ -237,10 +237,10 @@ class IRM(Plot):
 class Hysteresis(Plot):
     log = 'RockPy.PLOTTING.hysteresis'
 
-    def __init__(self, samples_list, norm='mass', log=None,
-                 plot='show', folder=None, name='hysteresis',
-                 plt_opt={}, **options):
+    def __init__(self, samples_list, norm='mass', log=None, plot='show', folder=None, name='hysteresis', plt_opt=None,
+                 **options):
 
+        if not plt_opt: plt_opt = {}
         if not log:
             log = logging.getLogger('RockPy.PLOTTING.hysteresis')
 
@@ -273,7 +273,7 @@ class Hysteresis(Plot):
     def _get_labels(self):
         self.x_label = 'Field [T]'
 
-        if self.norm == None:
+        if self.norm is None:
             self.y_label = 'Magnetic Moment $Am^2$'
         if self.norm == 'mass':
             self.y_label = 'Magnetic Moment $Am^2/kg$'
@@ -284,9 +284,9 @@ class Hysteresis(Plot):
 class Hys_Fabian2003(Hysteresis):
     log = general.create_logger('RockPy.PLOTTING.fabian2003_hys')
 
-    def __init__(self, samples_list, norm='mass', log=None,
-                 plot='show', folder=None, name='Fabian2003_hysteresis.pdf',
-                 plt_opt={}, **options):
+    def __init__(self, samples_list, norm='mass', log=None, plot='show', folder=None, name='Fabian2003_hysteresis.pdf',
+                 plt_opt=None, **options):
+        if not plt_opt: plt_opt = {}
         super(Hys_Fabian2003, self).__init__(samples_list=samples_list,
                                              norm=norm, log=log, value=value,
                                              plot=plot, folder=folder, name=name,
@@ -321,10 +321,10 @@ class Hys_Fabian2003(Hysteresis):
         self.out()
 
     def add_label(self, ax=None):
-        if ax == None:
+        if ax is None:
             ax = self.ax
 
-        if self.norm == None:
+        if self.norm is None:
             ax.set_ylabel('Magnetic Moment $Am^2$', fontsize=10)
         if self.norm == 'mass':
             ax.set_ylabel('Magnetic Moment $Am^2/kg$', fontsize=10)
@@ -430,11 +430,9 @@ class Dunlop(Plot):
 
 
 class Arai(Plot):
-    def __init__(self, sample_obj, component='m', norm='mass', log=None,
-                 t_min=20, t_max=700, line=True, check=True,
-                 plot='show', folder=None,
-                 name='arai plot', plt_opt={},
-                 **options):
+    def __init__(self, sample_obj, component='m', norm='mass', log=None, t_min=20, t_max=700, line=True, check=True,
+                 plot='show', folder=None, name='arai plot', plt_opt=None, **options):
+        if not plt_opt: plt_opt = {}
         super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
                                    name=name)
         std = options.get('std', True)
@@ -490,7 +488,7 @@ class Arai(Plot):
                                     norm_factor=norm_factor, component=component,
                                     plt_opt=plt_opt, **options)
 
-                if measurement.th_stdev != None:
+                if measurement.th_stdev is not None:
                     if std:
                         paleointensity.arai_stdev(palint_object=measurement, ax=self.ax,
                                                   t_min=self.t_min, t_max=self.t_max,
@@ -515,10 +513,10 @@ class Arai(Plot):
 
 
 class Pseudo_Thellier(Plot):
-    def __init__(self, samples_list, component='m', norm='mass', log=None,
-                 plot='show', folder=None, name='hysteresis',
-                 plt_opt={}, **options):
+    def __init__(self, samples_list, component='m', norm='mass', log=None, plot='show', folder=None, name='hysteresis',
+                 plt_opt=None, **options):
 
+        if not plt_opt: plt_opt = {}
         log = 'RockPy.PLOTTING.pseudo-thellier'
 
         super(Pseudo_Thellier, self).__init__(samples_list=samples_list,

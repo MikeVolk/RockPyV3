@@ -4,7 +4,7 @@ from matplotlib import rc, lines
 
 def plot_coe(coe_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     # todo implement out
-    if coe_obj != None:
+    if coe_obj is not None:
         ax.plot(coe_obj.remanence_interpolated[:, 0], coe_obj.remanence_interpolated[:, 1] / norm_factor, '-',
                 color='k')
         ax.plot(coe_obj.remanence[:, 0], coe_obj.remanence[:, 1] / norm_factor,

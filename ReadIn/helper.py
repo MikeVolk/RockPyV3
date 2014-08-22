@@ -5,22 +5,22 @@ import numpy as np
 import time
 
 
-def import_file(file, header_skip, delimiter='\t'):
+def import_file(d_file, header_skip, delimiter='\t'):
     log = logging.getLogger('RockPy.READIN.import_file')
     '''
     help function
     '''
-    reader_object = csv.reader(open(file), delimiter=delimiter)
+    reader_object = csv.reader(open(d_file), delimiter=delimiter)
     out = [[value for value in line] for line in reader_object]
     return np.array(out)[header_skip:]
 
 
-def get_data(file, header, column_name, header_skip, delimiter='\t'):
+def get_data(d_file, header, column_name, header_skip, delimiter='\t'):
     log = logging.getLogger('RockPy.READIN.get_data')
     '''
     help function
     '''
-    reader_object = csv.reader(open(file), delimiter=delimiter)
+    reader_object = csv.reader(open(d_file), delimiter=delimiter)
     for i in range(header_skip):
         reader_object.next()
     out = [line[header[column_name][0]] for line in reader_object]
@@ -49,18 +49,18 @@ def check_duplicates(T_xyz_list):
         return out
 
 
-def get_type(dict, type, **options):
+def get_type(d_dict, type, **options):
     log = logging.getLogger('RockPy.READIN.get_type')
-    if type in dict['type']:
+    if type in d_dict['type']:
 
-        log.debug('FOUND:\t measurement steps << %s >>' % (type))
+        log.debug('FOUND:\t measurement steps << %s >>' % type)
     else:
-        log.error('CANT FIND\t << %s >> in dict' % (type))
+        log.error('CANT FIND\t << %s >> in dict' % type)
         log.info('RETURNING:\t None')
         return None
-    type_indx = np.where(dict['type'] == type)[0]
-    out = np.array([[dict['step'][i],
-                     dict['x'][i], dict['y'][i], dict['z'][i], dict['m'][i], time.mktime(dict['time'][i])]
+    type_indx = np.where(d_dict['type'] == type)[0]
+    out = np.array([[d_dict['step'][i],
+                     d_dict['x'][i], d_dict['y'][i], d_dict['z'][i], d_dict['m'][i], time.mktime(d_dict['time'][i])]
                     for i in list(type_indx)])
 
     out = check_duplicates(out)
