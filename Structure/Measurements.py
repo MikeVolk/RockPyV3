@@ -3,8 +3,7 @@ __author__ = 'Mike'
 from RockPyV3.Functions import general
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
-from RockPyV3.Plots.general import Hys_Fabian2003, Dunlop
-import RockPyV3.Plots.general as RPV3plots
+import RockPyV3.Plots.general as RPplt
 from RockPyV3.Plots import hysteresis, viscotity
 from RockPyV3.Paleointensity import statistics
 import treatments
@@ -20,7 +19,7 @@ from pprint import pprint
 import matplotlib
 import csv
 
-
+#data [variable, x,y,z,m, (time)]
 class Measurement(object):
     def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
 
@@ -34,7 +33,13 @@ class Measurement(object):
                        'palint', 'thellier', 'pseudo-thellier',
                        'zfc', 'fc',
                        'visc',
-                       ]
+        ]
+        self.normalization = {}
+
+        self.raw_data = None
+        ''' initial state '''
+        self.is_raw_data = None
+        self.initial_state = None
 
         if mtype.lower() in implemented:
             self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
@@ -57,10 +62,15 @@ class Measurement(object):
 
         self.treatment = None
 
-    def import_data(self):
+    def import_data(self, rtn_raw_data=None, **options):
         implemented = {'sushibar': {'af-demag': machines.sushibar,
                                     'af': machines.sushibar,
-                                    'parm-spectra': machines.sushibar},
+                                    'parm-spectra': machines.sushibar,
+                                    'nrm': machines.sushibar,  # externally applied magnetization
+                                    'trm': machines.sushibar,  #externally applied magnetization
+                                    'irm': machines.sushibar,  #externally applied magnetization
+                                    'arm': machines.sushibar,  #externally applied magnetization
+        },
                        'vsm': {'hys': machines.vsm,
                                'irm': machines.vsm,
                                'coe': machines.vsm,
@@ -74,17 +84,36 @@ class Measurement(object):
                                 'coe': machines.vftb}}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
-        self.raw_data = None
-        if self.machine in implemented:
-            if self.mtype in implemented[self.machine]:
-                self.raw_data = implemented[self.machine][self.mtype](self.mfile, self.sample_obj.name)
-                if self.raw_data == None:
+
+        machine = options.get('machine', self.machine)
+        mtype = options.get('mtype', self.mtype)
+        mfile = options.get('mfile', self.mfile)
+
+        if machine in implemented:
+            if mtype in implemented[machine]:
+                raw_data = implemented[machine][mtype](mfile, self.sample_obj.name)
+                if raw_data == None:
                     self.log.error('IMPORTING\t did not transfer data - CHECK sample name and data file')
                     return
+                else:
+                    if rtn_raw_data:
+                        self.log.info(' RETURNING raw_data for << %s , %s >> data' % (machine, mtype))
+                        return raw_data
+                    else:
+                        self.raw_data = raw_data
             else:
                 self.log.error('IMPORTING UNKNOWN\t measurement type << %s >>' % (self.mtype))
         else:
             self.log.error('UNKNOWN\t machine << %s >>' % (self.machine))
+
+    def add_initial_state(self,
+                          mtype, mfile, machine,  # standard
+                          **options):
+        self.log.info(' ADDING  initial state to measurement << %s >> data' % (self.mtype))
+        self.is_raw_data = self.import_data(machine=machine, mfile=mfile, mtype=mtype, rtn_raw_data=True)
+        components = ['x', 'y', 'z', 'm']
+        self.initial_state = np.array([self.is_raw_data[i] for i in components])
+
 
     def add_treatment(self, ttype, options=None):
         self.ttype = ttype.lower()
@@ -124,12 +153,39 @@ class Measurement(object):
         return out
 
 
-class Af_Demag(Measurement):
-    # general.create_logger('RockPy.MEASUREMENT.af-demag')
+    def normalize(self, dtype, norm, value=1, **options):
+        implemented = {
+            'mass': self.sample_obj.mass_kg,
+            'value': value,
+            'nrm': getattr(self, 'nrm', None),
+            'trm': getattr(self, 'trm', None),
+            'irm': getattr(self, 'irm', None),
+            'arm': getattr(self, 'arm', None),
+            'th': getattr(self, 'th', None),
+            'pt': getattr(self, 'pt', None),
+            'ptrm': getattr(self, 'ptrm', None),
+        }
+        norm_factor = implemented[norm.lower()]
 
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method, **options):
+        try:
+            self.log.info(' Normalizing datatype << %s >> by << %s [ %.3e ]>>' % (dtype, norm, norm_factor))
+            data = getattr(self, dtype)
+            out = data / norm_factor
+            return out
+        except:
+            self.log.error('CANT normalize by data-type << %s >>' % dtype)
+            self.log.warning('RETURNING NON NORMALIZED data-type << %s >>' % dtype)
+            return data
+
+#data [af_field, x,y,z,m]
+class Af_Demag(Measurement):
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,  # standard
+                 mag_method,  #measurement specific
+                 **options):
         log = 'RockPy.MEASUREMENT.af-demag'
         super(Af_Demag, self).__init__(sample_obj, mtype, mfile, machine, log)
+
         self.mag_method = mag_method
 
         try:
@@ -144,15 +200,16 @@ class Af_Demag(Measurement):
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
 
+
     @property
     def data(self):
         out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
         return out.T
 
     def plot(self):
-        RPV3plots.Af_Demag(self.sample_obj)
+        RPplt.Af_Demag(self.sample_obj)
 
-
+#data [af_field, x,y,z,m]
 class pARM_spectra(Measurement):
     # general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
 
@@ -204,11 +261,12 @@ class pARM_spectra(Measurement):
 
 
 class Coe(Measurement):
-    general.create_logger('RockPy.MEASUREMENT.COE')
-
     def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.COE')
-        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
+        log = 'RockPy.MEASUREMENT.COE'
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
+
+        # todo homogenize input
+        # todo write test() function
 
         ''' VSM '''
 
@@ -716,9 +774,9 @@ class Hysteresis(Measurement):
         self.paramag_corrected = True
 
     def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
-        Hys_Fabian2003(self.sample_obj, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
-                                                                                                      folder=folder,
-                                                                                                      name=name)
+        RPplt.Hys_Fabian2003(self.sample_obj, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
+                                                                                                                folder=folder,
+                                                                                                                name=name)
 
     def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
         factor = {'mass': self.sample_obj.mass(),
@@ -844,7 +902,7 @@ class Thellier(Measurement):
     '''
     # general.create_logger('RockPy.MEASUREMENT.thellier-thellier')
 
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method=None, lab_field=35):
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method='', lab_field=35, **options):
         log = 'RockPy.MEASUREMENT.thellier-thellier'
 
         Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
@@ -981,7 +1039,7 @@ class Thellier(Measurement):
 
         # for i in out:
         # print i[0][0], i[1][0], i[2][0], i[3][0]
-        #     print i[0][4], i[1][4], i[2][4], i[3][4]
+        # print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
     def _get_ac_data(self):
@@ -1015,7 +1073,7 @@ class Thellier(Measurement):
             out.append([d_ac, th_i, ptrm_j, th_j])
         # for i in out:
         # print i[0][0], i[1][0], i[2][0], i[3][0]
-        #     print i[0][4], i[1][4], i[2][4], i[3][4]
+        # print i[0][4], i[1][4], i[2][4], i[3][4]
         return out
 
     def flip_ptrm(self):
@@ -1683,11 +1741,10 @@ class Thellier(Measurement):
                 print i[0], '\t', i[1], '\t', i[2], '\t', i[3]
 
     def dunlop(self, component='m'):
-        Dunlop(self, component=component)
+        RPplt.Dunlop(self, component=component)
 
 
 class Zfc_Fc(Measurement):
-
     def __init__(self, sample_obj, mtype, mfile, machine, mag_method='IRM'):
         log = 'RockPy.MEASUREMENT.zfc-fc'
         super(Zfc_Fc, self).__init__(sample_obj, mtype, mfile, machine, log)
@@ -1809,21 +1866,100 @@ class Zfc_Fc(Measurement):
 
 
 class Pseudo_Thellier(Measurement):
+    def __init__(self, sample_obj,
+                 af_obj, parm_obj,
+                 mtype=None, mfile=None, machine=None,
+                 **options):
+        log = 'RockPy.MEASUREMENT.pseudo-thellier'
+        super(Pseudo_Thellier, self).__init__(sample_obj, mtype, mfile, machine, log=log, **options)
 
-        def __init__(self, sample_obj,
-                     af_obj, parm_obj,
-                     mtype=None, mfile=None, machine=None,
-                     **options):
-            log = 'RockPy.MEASUREMENT.pseudo-thellier'
-            Measurement.__init__(self, sample_obj, mtype, mfile, machine, log=log, **options)
+        parm_obj.subtract_af3()
+        parm_data = parm_obj.data
 
-            parm_obj.subtract_af3()
-            parm_data = parm_obj.data
+        self.components = {'fields': 0, 'x': 1, 'y': 2, 'z': 3, 'm': 4}
 
-            self.components = {'fields':0, 'x':1 , 'y':2, 'z',3, 'm':4}
+        self.lab_field = np.mean(parm_obj.dc_field)
 
-            self.parm = np.column_stack((parm_obj.u_window_limit, np.array([np.sum(parm_data[:i,:], axis=0) for i in range(len(parm_data))])[:,1:]))
-            self.nrm = np.array([af_obj.data[i] for i in range(len(af_obj.data)) if af_obj.data[i][0] in self.parm[:,0]])
+        self.trm = af_obj.data[0, :]
+        self.nrm = af_obj.data[0, :]
 
-        def plot(self, component = 'm'):
-            pass
+        self.parm = np.column_stack((
+        parm_obj.u_window_limit, np.array([np.sum(parm_data[:i, :], axis=0) for i in range(len(parm_data))])[:, 1:]))
+        self.af = np.array([af_obj.data[i] for i in range(len(af_obj.data)) if af_obj.data[i][0] in self.parm[:, 0]])
+
+        self.sum = np.c_[self.parm[:, 0], self.parm[:, 1:] + self.af[:, 1:]]
+
+    @property
+    def th(self):
+        return self.af
+
+    @property
+    def ptrm(self):
+        return self.parm
+
+    def plot(self, norm='nrm', component='m'):
+        RPplt.Pseudo_Thellier(self.sample_obj, norm=norm)
+
+    def _get_af_arm_data(self, b_min=0, b_max=200, **options):
+        """
+        Returns af, arm data with [x,y,z] if option 'm'=True is given, it outputs [x,y,z,m]
+
+        :param b_min: float
+        :param b_max: float
+        :return: ndarray
+        """
+        m = options.get('m')
+
+        if m:
+            ran = 5
+        else:
+            ran = 4
+        xy_data = np.array([[i[1:ran], j[1:ran]] for i in self.af for j in self.parm
+                            if i[0] == j[0]
+                            if b_min <= i[0] <= b_max
+                            if b_min <= j[0] <= b_max])
+        x = xy_data[:, 0]
+        y = xy_data[:, 1]
+        return x, y
+
+
+    def calculate_slope(self, b_min=0, t_max=200, **options):
+        self.log.info('CALCULATING\t arai line fit << t_min=%.1f , t_max=%.1f >>' % (b_min, t_max))
+
+        y, x = self._get_af_arm_data(t_min=b_min, t_max=t_max, m=True)
+
+        x = np.fabs(x)
+        y = np.fabs(y)
+
+        ''' calculate averages '''
+
+        x_mean = np.mean(x, axis=0)
+        y_mean = np.mean(y, axis=0)
+
+        ''' calculate differences '''
+        x_diff = x - x_mean
+        y_diff = y - y_mean
+
+        ''' square differences '''
+        x_diff_sq = x_diff ** 2
+        y_diff_sq = y_diff ** 2
+
+        ''' sum squared differences '''
+        x_sum_diff_sq = np.sum(x_diff_sq, axis=0)
+        y_sum_diff_sq = np.sum(y_diff_sq, axis=0)
+
+        mixed = x_diff * y_diff
+        mixed_sum = np.sum(x_diff * y_diff, axis=0)
+        ''' calculate slopes '''
+        N = len(x)
+
+        slopes = np.sqrt(y_sum_diff_sq / x_sum_diff_sq) * np.sign(mixed_sum)
+
+        sigmas = np.sqrt((2 * y_sum_diff_sq - 2 * slopes * mixed_sum) / ( (N - 2) * x_sum_diff_sq))
+
+        y_intercept = y_mean + abs(slopes * x_mean)
+        x_intercept = - y_intercept / slopes
+
+        return slopes, sigmas, y_intercept, x_intercept
+
+

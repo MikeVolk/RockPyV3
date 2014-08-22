@@ -15,10 +15,12 @@ import backfield, hysteresis
 class Plot(object):
     # log = general.create_logger('RockPy.PLOTTING')
 
-    def __init__(self, samples_list, norm=None, log=None, value=None,
+    def __init__(self, samples_list, norm=None, log=None,
                  plot='show', folder=None, name='output.pdf',
                  plt_opt={},
                  **options):
+
+        self.colors = helper.get_colors()
 
         matplotlib.rcParams.update({'font.size': 10})
         params = {'backend': 'ps',
@@ -30,10 +32,12 @@ class Plot(object):
                   'xtick.labelsize': 10,
                   'ytick.labelsize': 10,
                   # 'text.usetex': True,
-                  'axes.unicode_minus': True}
+                  'axes.unicode_minus': True,
+                  'axes.color_cycle' : self.colors}
         plt.rcParams.update(params)
 
         self.colors = helper.get_colors()
+
         self.x_label = None
         self.y_label = None
 
@@ -52,8 +56,8 @@ class Plot(object):
 
         if folder == None:
             from os.path import expanduser
-
             folder = expanduser("~") + '/Desktop/'
+
         self.folder = folder
         self.colors = helper.get_colors()
         self.norm = norm
@@ -66,7 +70,9 @@ class Plot(object):
         self.ax.xaxis.major.formatter._useMathText = True
         self.ax.yaxis.major.formatter._useMathText = True
         self.ax.ticklabel_format(style='sci', scilimits=(1, 4), axis='both')
-        plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
+
+        # plt.rc('axes', color_cycle=['k', 'm', 'y', 'c'])
+        plt.rc('axes', color_cycle=self.colors)
 
     def out(self, *args):
         if not '.pdf' in self.name:
@@ -94,41 +100,66 @@ class Plot(object):
             plt.savefig(self.folder + self.name, dpi=300)
 
 
-class Af_Demag(Plot):
+class Generic(Plot):
+    def __init__(self, samples_list, norm='mass',
+                 plot='show', folder=None, name='hysteresis',
+                 plt_opt={},
+                 **options):
+        log = 'RockPy.PLOT.generic'
 
-    def __init__(self, samples_list, norm='mass', value=None,
+        super(Generic, self).__init__(samples_list=samples_list,
+                                      norm=norm, log=log,
+                                      plot=plot, folder=folder, name=name,
+                                      **options)
+    def plot(self):
+        pass
+
+
+class Af_Demag(Plot):
+    def __init__(self, samples_list, norm='mass',
                  plot='show', folder=None, name='hysteresis',
                  plt_opt={}, **options):
+
+
         log = 'RockPy.PLOT.af-demag'
-        dtype = options.get('dtype', 'm')
         super(Af_Demag, self).__init__(samples_list=samples_list,
-                                 norm=norm, log=log, value=value,
-                                 plot=plot, folder=folder, name=name,
-                                 **options)
-        try:
-            self.show(dtype=dtype)
-            self.out()
-        except AttributeError:
-            self.log.error('can\'t plot')
+                                       norm=norm, log=log,
+                                       plot=plot, folder=folder, name=name,
+                                       **options)
+
+        self.dtype = options.get('dtype', 'm')
+
+        # try:
+        self.show(dtype=self.dtype)
+            # self.out()
+        # except AttributeError:
+        #     self.log.error('can\'t plot')
 
     def show(self, dtype='m'):
-        self.x_label = 'field'
-        self.y_label = 'moment'
+        self.x_label = 'AF-field [mT]'
+        self.y_label = 'magentic moment'
+        plt_idx = 0
+
         for sample in self.samples:
-            for measurement in sample.find_measurement('af-demag'):
+            measurements = sample.find_measurement('af-demag')
+            for measurement in measurements:
                 label = sample.name + measurement.mag_method
+                if len(measurements) > 1 and not measurement.treatment:
+                    label += ' ' + str(measurements.index(measurement))
                 if measurement.treatment:
                     label += '  ' + measurement.treatment.get_label()
                 self.ax.plot(measurement.fields, getattr(measurement, dtype), label=label)
                 handles, labels = self.ax.get_legend_handles_labels()
+                plt_idx += 1
+            plt_idx += 1
 
         self.ax.legend(handles, labels)
+        self.ax.ticklabel_format(style='plain', axis='x', useOffset=False)
         return self.ax
 
+
 class PARM_spectra(Plot):
-
-
-    def __init__(self, samples_list, norm='mass', log=None, value=None,
+    def __init__(self, samples_list, norm='mass', log=None,
                  plot='show', folder=None, name='pARM-spectra',
                  plt_opt={}, **options):
 
@@ -136,9 +167,9 @@ class PARM_spectra(Plot):
             log = 'RockPy.PLOTTING.parm-spectra'
 
         super(PARM_spectra, self).__init__(samples_list=samples_list,
-                                         norm=norm, log=log, value=value,
-                                         plot=plot, folder=folder, name=name,
-                                         **options)
+                                           norm=norm, log=log,
+                                           plot=plot, folder=folder, name=name,
+                                           **options)
         self.x_label = 'DC Bias window [mT]'
 
         try:
@@ -168,16 +199,16 @@ class PARM_spectra(Plot):
 
                 x = measurement.fields
                 y = measurement.m / norm_factor
-                self.ax.plot(x,y, marker = '.',
-                             color = self.colors[plt_idx])
-                plt_idx +=1
-        #         std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
-        #         self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
-        #                      color=std.get_color())
-        #
-        #         handles, labels = self.ax.get_legend_handles_labels()
-        #         self.ax.legend(handles, labels, prop={'size': 8})
-        # plt.show()
+                self.ax.plot(x, y, marker='.',
+                             color=self.colors[plt_idx])
+                plt_idx += 1
+                # std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
+                # self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
+                #                      color=std.get_color())
+                #
+                #         handles, labels = self.ax.get_legend_handles_labels()
+                #         self.ax.legend(handles, labels, prop={'size': 8})
+                # plt.show()
 
 
 class IRM(Plot):
@@ -204,9 +235,9 @@ class IRM(Plot):
 
 
 class Hysteresis(Plot):
-    log = general.create_logger('RockPy.PLOTTING.hysteresis')
+    log = 'RockPy.PLOTTING.hysteresis'
 
-    def __init__(self, samples_list, norm='mass', log=None, value=None,
+    def __init__(self, samples_list, norm='mass', log=None,
                  plot='show', folder=None, name='hysteresis',
                  plt_opt={}, **options):
 
@@ -214,7 +245,7 @@ class Hysteresis(Plot):
             log = logging.getLogger('RockPy.PLOTTING.hysteresis')
 
         super(Hysteresis, self).__init__(samples_list=samples_list,
-                                         norm=norm, log=log, value=value,
+                                         norm=norm, log=log,
                                          plot=plot, folder=folder, name=name,
                                          **options)
 
@@ -253,7 +284,7 @@ class Hysteresis(Plot):
 class Hys_Fabian2003(Hysteresis):
     log = general.create_logger('RockPy.PLOTTING.fabian2003_hys')
 
-    def __init__(self, samples_list, norm='mass', log=None, value=None,
+    def __init__(self, samples_list, norm='mass', log=None,
                  plot='show', folder=None, name='Fabian2003_hysteresis.pdf',
                  plt_opt={}, **options):
         super(Hys_Fabian2003, self).__init__(samples_list=samples_list,
@@ -339,10 +370,10 @@ class Hys_Fabian2003(Hysteresis):
 
 
 class Dunlop(Plot):
-    # self, samples_list, norm='mass', log=None, value=None,
-    #              plot='show', folder=None, name='hysteresis',
-    #              plt_opt={}, **options)
-    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None, plot='show', folder=None,
+    # self, samples_list, norm='mass', log=None, 
+    # plot='show', folder=None, name='hysteresis',
+    # plt_opt={}, **options)
+    def __init__(self, sample_obj, component='m', norm='mass', log=None, plot='show', folder=None,
                  name='dunlop plot', **plt_opt):
         # todo homogenize with def plot
         '''
@@ -358,7 +389,7 @@ class Dunlop(Plot):
         if isinstance(sample_obj, RockPyV3.Structure.measurements.Thellier):
             sample_obj = sample_obj.sample
 
-        super(Dunlop, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
+        super(Dunlop, self).__init__(samples_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
                                      name=name)
 
         for sample_obj in self.samples:
@@ -372,14 +403,14 @@ class Dunlop(Plot):
                            'trm': measurement.trm[:, components[component]],
                            'nrm': measurement.nrm[:, components[component]],
                            'None': 1,
-                           }
+                }
 
                 norm_factor = factors[norm]
 
-                idx = self.measurements.index(measurement)  # index of measurement used to distinguish repeated measurements on the same sample
-                if len(self.samples) >1:
+                idx = self.measurements.index(
+                    measurement)  # index of measurement used to distinguish repeated measurements on the same sample
+                if len(self.samples) > 1:
                     idx = self.samples.index(sample_obj)  # index of measurement used to distinguish samples
-
 
                 lines = ['-', '--', ':']
 
@@ -399,12 +430,12 @@ class Dunlop(Plot):
 
 
 class Arai(Plot):
-    def __init__(self, sample_obj, component='m', norm='mass', log=None, value=None,
+    def __init__(self, sample_obj, component='m', norm='mass', log=None,
                  t_min=20, t_max=700, line=True, check=True,
                  plot='show', folder=None,
                  name='arai plot', plt_opt={},
                  **options):
-        super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, value=value, plot=plot, folder=folder,
+        super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
                                    name=name)
         std = options.get('std', True)
         for sample_obj in self.samples:
@@ -419,11 +450,11 @@ class Arai(Plot):
             for measurement in self.measurements:
                 if len(self.measurements) > 1:
                     if measurement.treatment:
-                        label = label_aux+measurement.treatment.label
+                        label = label_aux + measurement.treatment.label
                     else:
-                        label = label_aux+ self.measurements.index(measurement)
+                        label = label_aux + self.measurements.index(measurement)
                 else:
-                    label =''
+                    label = ''
 
                 components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
                 factors = {'mass': [sample_obj.mass_kg, sample_obj.mass_kg],
@@ -434,17 +465,17 @@ class Arai(Plot):
                            'nrm': [measurement.nrm[:, components[component]][0],
                                    measurement.nrm[:, components[component]][0]],
                            'th': [measurement.th[0, components[component]], measurement.th[0, components[component]]],
-                           'dnorm': [measurement.ptrm[-1, components[component]], measurement.th[0, components[component]]],
+                           'dnorm': [measurement.ptrm[-1, components[component]],
+                                     measurement.th[0, components[component]]],
                            'none': [1, 1],
-                           }
+                }
 
                 norm_factor = factors[norm.lower()]
 
                 idx = self.measurements.index(
                     measurement)  # index of measurement used to distinguish repeated measurements on the same sample
-                if len(self.samples) >1:
+                if len(self.samples) > 1:
                     idx = self.samples.index(sample_obj)  # index of measurement used to distinguish samples
-
 
                 lines = ['-', '--', ':']
 
@@ -455,18 +486,17 @@ class Arai(Plot):
                 paleointensity.arai(palint_object=measurement, ax=self.ax,
                                     t_min=self.t_min, t_max=self.t_max,
                                     line=line, check=check,
-                                    plt_idx=idx,label=label,
+                                    plt_idx=idx, label=label,
                                     norm_factor=norm_factor, component=component,
                                     plt_opt=plt_opt, **options)
 
                 if measurement.th_stdev != None:
                     if std:
                         paleointensity.arai_stdev(palint_object=measurement, ax=self.ax,
-                                        t_min=self.t_min, t_max=self.t_max,
-                                        plt_idx=idx,
-                                        norm_factor=norm_factor, component=component,
-                                        plt_opt=plt_opt, **options)
-
+                                                  t_min=self.t_min, t_max=self.t_max,
+                                                  plt_idx=idx,
+                                                  norm_factor=norm_factor, component=component,
+                                                  plt_opt=plt_opt, **options)
 
         self.fig1.suptitle('%s Arai Plot' % sample_obj.name, fontsize=16)
         self.x_label = 'pTRM gained'
@@ -475,10 +505,56 @@ class Arai(Plot):
         '''general plotting'''
         plt.gca().set_ylim(bottom=0)
         try:
-            leg = plt.legend(loc = 'best', fancybox = True)
+            leg = plt.legend(loc='best', fancybox=True)
             leg.get_frame().set_alpha(0.5)
         except AttributeError:
             self.log.warning('COULD not set frame alpha. Probably no labels')
         # plt.subplots_adjust(top=0.94)
         plt.tight_layout(pad=2.7)
         self.out(plot)
+
+
+class Pseudo_Thellier(Plot):
+    def __init__(self, samples_list, component='m', norm='mass', log=None,
+                 plot='show', folder=None, name='hysteresis',
+                 plt_opt={}, **options):
+
+        log = 'RockPy.PLOTTING.pseudo-thellier'
+
+        super(Pseudo_Thellier, self).__init__(samples_list=samples_list,
+                                              norm=norm, log=log, value=value,
+                                              plot=plot, folder=folder, name=name,
+                                              **options)
+        self.component = component
+        self.plt_opt = plt_opt
+
+        self.x_label = 'pARM gained'
+        self.y_label = 'NRM remaining'
+
+        sample_names = [s.name for s in self.samples]
+        self.fig1.suptitle('%s Arai Plot' % ' '.join(sample_names), fontsize=16)
+
+        try:
+            self.show()
+            self.out()
+        except AttributeError:
+            self.log.error('SOMETHING seems to be wrong')
+
+    def show(self):
+        for sample in self.samples:
+
+            self.measurements = sample.find_measurement('pseudo-thellier')
+
+            for measurement in self.measurements:
+                idx = measurement.components[self.component]
+                factor = {'mass': [measurement.sample_obj.mass_kg, measurement.sample_obj.mass_kg],
+                          'nrm': [measurement.nrm[idx], measurement.nrm[idx]],
+                          'None': [1, 1]}
+
+                norm_factor = factor[self.norm]  # # NORMALIZATION FACTOR
+
+                self.ax = paleointensity.arai(palint_object=measurement, ax=self.ax,
+                                              plt_idx=idx,
+                                              check=False,
+                                              norm_factor=norm_factor, component=self.component,
+                                              plt_opt=self.plt_opt)

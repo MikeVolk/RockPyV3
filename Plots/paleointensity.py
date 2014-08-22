@@ -23,8 +23,10 @@ def dunlop(palint_object, ax, component='m', norm_factor=1, plt_idx=0, out='show
     ax.plot(palint_object.ptrm[:, 0], palint_object.ptrm[:, idx] / norm_factor, '.-',
             marker=marker[plt_idx],
             color=colors[2], **plt_opt)
-    ax.plot(palint_object.tr[:, 0], palint_object.tr[:, idx] / norm_factor,
-            color='k', marker=marker[plt_idx], alpha=0.8, ls='')
+
+    #todo write dunlop_add_tr()
+    # ax.plot(palint_object.tr[:, 0], palint_object.tr[:, idx] / norm_factor,
+    #         color='k', marker=marker[plt_idx], alpha=0.8, ls='')
 
     dunlop_std(palint_object=palint_object, ax=ax, component=component, norm_factor=norm_factor, plt_idx=plt_idx,
                plt_opt=plt_opt)
@@ -79,7 +81,7 @@ def arai(palint_object, ax, component='m', norm=None, norm_factor=[1, 1], plt_id
     temps = options.get('temps')
 
     if area:
-        slopes, sigmas, y_intercept, x_intercept = palint_object.calculate_slope(t_min=t_min, t_max=t_max)
+        slopes, sigmas, y_intercept, x_intercept = palint_object.calculate_slope(b_min=t_min, t_max=t_max)
         y_fit = (y_intercept[idx - 1] + slopes[idx - 1] * ptrm * norm_factor[0]) / norm_factor[1]
         ax.fill_between(np.fabs(ptrm), np.fabs(th), y_fit, color=colors[plt_idx], alpha=0.2)
 
@@ -163,9 +165,12 @@ def add_arai_line(palint_object, ax, component='m', t_min=20, t_max=700, norm=No
     colors = helper.get_colors()
     idx = palint_object.components[component]
 
-    slopes, sigmas, y_intercept, x_intercept = palint_object.calculate_slope(t_min=t_min, t_max=t_max)
+    slopes, sigmas, y_intercept, x_intercept = palint_object.calculate_slope(b_min=t_min, t_max=t_max)
 
-    y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max, m=True)
+    if palint_object.mtype == 'palint':
+        y, x = palint_object._get_th_ptrm_data(t_min=t_min, t_max=t_max, m=True)
+    if palint_object.mtype == 'pseudo-thellier':
+        y, x = palint_object._get_af_arm_data(t_min=t_min, t_max=t_max, m=True)
     # x_m = [np.linalg.norm(i) for i in x]
     # x = np.c_[x, x_m]
 

@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e37426bd-71ce-4d69-a24b-13832d3a73b7" name="Default" comment="ReadIn speed-up&#10;">
-      <change type="MOVED" beforePath="$PROJECT_DIR$/Plots/General.py" afterPath="$PROJECT_DIR$/Plots/general.py" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/ReadIn/Machines.py" afterPath="$PROJECT_DIR$/ReadIn/machines.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/source/measurements.rst" afterPath="$PROJECT_DIR$/source/measurements.rst" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Plots/paleointensity.py" afterPath="$PROJECT_DIR$/Plots/paleointensity.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Structure/sample.py" afterPath="$PROJECT_DIR$/Structure/sample.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <list id="ceb68396-0786-4fa5-8b76-ee5db19ef7ab" name="Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
     <list id="1cf93eae-3449-4d65-a663-b8e06095295a" name="Failed commit: Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
@@ -23,6 +20,7 @@
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="PyCharm30/coverage/RockPy V3$vsm_anisotropy.coverage" NAME="vsm_anisotropy Coverage Results" MODIFIED="1408020002476" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/testing" />
     <SUITE FILE_PATH="PyCharm30/coverage/RockPy V3$Simulation.coverage" NAME="Simulation Coverage Results" MODIFIED="1407405308588" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RockPy V3$cryo_readin_speed.coverage" NAME="cryo-readin-speed Coverage Results" MODIFIED="1408606617988" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/testing" />
     <SUITE FILE_PATH="PyCharm30/coverage/RockPy V3$cryo_readin_speed.coverage" NAME="cryo-readin-speed Coverage Results" MODIFIED="1408031701928" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/testing" />
     <SUITE FILE_PATH="PyCharm30/coverage/RockPy V3$structure_tests.coverage" NAME="structure_tests Coverage Results" MODIFIED="1406738204864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
@@ -41,8 +39,8 @@
       <file leaf-file-name="general.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Plots/general.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="3330" max-vertical-offset="7230">
-              <caret line="230" column="12" selection-start-line="230" selection-start-column="12" selection-end-line="230" selection-end-column="12" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="1309" max-vertical-offset="8475">
+              <caret line="550" column="31" selection-start-line="550" selection-start-column="31" selection-end-line="550" selection-end-column="31" />
               <folding />
             </state>
           </provider>
@@ -81,9 +79,11 @@
       <file leaf-file-name="measurements.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Structure/measurements.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.7743786" vertical-offset="435" max-vertical-offset="27180">
-              <caret line="74" column="0" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
-              <folding />
+            <state vertical-scroll-proportion="0.65666044" vertical-offset="28390" max-vertical-offset="29565">
+              <caret line="1916" column="84" selection-start-line="1916" selection-start-column="84" selection-end-line="1916" selection-end-column="84" />
+              <folding>
+                <element signature="e#35#73#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -659,20 +659,20 @@
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24893618" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.4" sideWeight="0.47278547" order="9" side_tool="true" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3893617" sideWeight="0.47278547" order="9" side_tool="true" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3287234" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32998565" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32283884" sideWeight="0.5070922" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32283884" sideWeight="0.4929078" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32283884" sideWeight="0.5069686" order="1" side_tool="true" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32283884" sideWeight="0.4912892" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.828175" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32978722" sideWeight="0.30522946" order="10" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3893617" sideWeight="0.5272145" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3893617" sideWeight="0.5272145" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908705" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Documentation" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2113127" sideWeight="0.49920762" order="4" side_tool="false" content_ui="tabs" x="104" y="122" width="1716" height="858" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908705" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3287234" sideWeight="0.5144077" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -758,7 +758,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="2190" max-vertical-offset="24390">
           <caret line="146" column="22" selection-start-line="146" selection-start-column="22" selection-end-line="146" selection-end-column="22" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -773,7 +775,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -802,7 +806,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -831,7 +837,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -1055,14 +1063,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Plots/general.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="3330" max-vertical-offset="7230">
-          <caret line="230" column="12" selection-start-line="230" selection-start-column="12" selection-end-line="230" selection-end-column="12" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ReadIn/helper.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1305">
@@ -1087,11 +1087,21 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Plots/general.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1309" max-vertical-offset="8475">
+          <caret line="550" column="31" selection-start-line="550" selection-start-column="31" selection-end-line="550" selection-end-column="31" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Structure/measurements.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.7743786" vertical-offset="435" max-vertical-offset="27075">
-          <caret line="74" column="0" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
-          <folding />
+        <state vertical-scroll-proportion="0.65666044" vertical-offset="28390" max-vertical-offset="29565">
+          <caret line="1916" column="84" selection-start-line="1916" selection-start-column="84" selection-end-line="1916" selection-end-column="84" />
+          <folding>
+            <element signature="e#35#73#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

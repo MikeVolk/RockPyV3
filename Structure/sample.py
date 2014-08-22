@@ -229,8 +229,8 @@ class TTGroup(SampleGroup):
     def get_statistics(self, component='m', t_min=20, t_max=700,
                        rtn='print', folder=None, name='paleointensity_statistics.stats.csv',
                        **options):
-        measurements = self.get_all_measurements(mtype='palint')
-        treatments = self.get_treatment_for_mtype(mtype='palint')
+        measurements = self.get_all_measurements(mtype='thellier')
+        treatments = self.get_treatment_for_mtype(mtype='thellier')
         if not '.csv' in name:
             name +='.csv'
         if folder == None:
@@ -244,7 +244,7 @@ class TTGroup(SampleGroup):
         for treat in treatments:  # getting measurements with the same treatments
             measurements_treat = [i for i in measurements if i.treatment.label == treat]
             for measurement in measurements_treat:
-                aux = [measurement.sample.name, measurement.treatment.label]
+                aux = [measurement.sample_obj.name, measurement.treatment.label]
                 aux += measurement.print_statistics_table(component, t_min, t_max, header=False, csv=True)
                 out.append(aux)
 
@@ -466,7 +466,7 @@ class Sample():
 
     def add_measurement(self,
                         mtype=None, mfile=None, machine=None, # general
-                        mag_method=None, # IRM
+                        mag_method='', # IRM
                         af_obj = None, parm_obj = None, # pseudo-thellier
                         **options):
         '''
