@@ -206,6 +206,8 @@ class Af_Demag(Measurement):
         measurement = np.c_[self.x, self.y, self.z]
         out = data.data(self.fields, measurement)
         return out
+
+    # old data format
     # def data(self):
     #     out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
     #     return out.T

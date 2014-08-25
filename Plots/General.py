@@ -9,11 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib import rc, lines
 import numpy as np
-import backfield, hysteresis
+import backfield, hysteresis, af_demagnetization
 
 
 class Plot(object):
-    # log = general.create_logger('RockPy.PLOTTING')
 
     def __init__(self, samples_list, norm=None, log=None,
                  plot='show', folder=None, name='output.pdf',
@@ -21,6 +20,9 @@ class Plot(object):
                  **options):
 
         self.colors = helper.get_colors()
+        self.plot_marker = options.get('marker', True)
+        self.markers = helper.get_marker()
+        self.lines = ['-', '--', ':', '-.']
 
         matplotlib.rcParams.update({'font.size': 10})
         params = {'backend': 'ps',
@@ -35,8 +37,6 @@ class Plot(object):
                   'axes.unicode_minus': True,
                   'axes.color_cycle' : self.colors}
         plt.rcParams.update(params)
-
-        self.colors = helper.get_colors()
 
         self.x_label = None
         self.y_label = None
@@ -59,7 +59,7 @@ class Plot(object):
             folder = expanduser("~") + '/Desktop/'
 
         self.folder = folder
-        self.colors = helper.get_colors()
+
         self.norm = norm
         self.samples = [i for i in samples_list]
 
@@ -131,7 +131,7 @@ class Af_Demag(Plot):
 
         # try:
         self.show(dtype=self.dtype)
-            # self.out()
+        self.out()
         # except AttributeError:
         #     self.log.error('can\'t plot')
 
@@ -156,6 +156,24 @@ class Af_Demag(Plot):
         self.ax.legend(handles, labels)
         self.ax.ticklabel_format(style='plain', axis='x', useOffset=False)
         return self.ax
+
+class Data_Test(Af_Demag):
+    def show(self, dtype):
+        plt_idx, line_idx, marker_idx = 0 ,0 ,0
+        for sample in self.samples:
+            plt_idx = self.samples.index(sample)
+            measurements = sample.find_measurement('af-demag')
+            for measurement in measurements:
+                if self.plot_marker:
+                    marker_idx = measurements.index(measurement)
+                else:
+                    marker_idx = 15
+                for dtype in list(self.dtype):
+                    line_idx = self.dtype.index(dtype)
+                    plt_opt = {'color':self.colors[plt_idx], 'linestyle': self.lines[line_idx], 'marker':self.markers[marker_idx]}
+                    af_demagnetization.af_plot(af_demag_obj=measurement, ax=self.ax, component=dtype, plt_opt=plt_opt)
+                    af_demagnetization.af_diff_plot(af_demag_obj=measurement, ax=self.ax, component=dtype, plt_opt=plt_opt)
+
 
 
 class PARM_spectra(Plot):

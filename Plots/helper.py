@@ -17,7 +17,7 @@ def get_moment_label(norm_factor):
 
 
 def get_marker():
-    marker = ['o', 'v', '^', '<', '>', '1', '2', '3', '4', '8', 's', 'p', '*', 'h', 'H']
+    marker = ['o', 'v', '^', '<', '>', '1', '2', '3', '4', '8', 's', 'p', '*', 'h', 'H', None]
     return marker
 
 

@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import logging
 
+
 class tensor():
     '''
 
@@ -38,13 +39,14 @@ class data(object):
         '''
         Generic 3D / 1D data containe with rudimentary functions concerning paleomagnetic data
         '''
-        self.log = logging.getLogger('RockPy.DATA.data%s' %str(measurement.shape))
-        self.log.debug('CREATING data structure: dimension << %s >>' %str(measurement.shape))
+        self.log = logging.getLogger('RockPy.DATA.data%s' % str(measurement.shape))
+        self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
         self.variable = variable
         self.measurement = measurement
 
-        if not time:
+        if time is None:
             time = np.empty(len(variable))
+
         self.time = time
 
     ''' data properties '''
@@ -106,7 +108,7 @@ class data(object):
     def len(self):
         return len(self.measurement)
 
-    ### functions
+    # ## functions
 
     def max(self, component='m'):
         out = getattr(self, component, None)
@@ -115,7 +117,7 @@ class data(object):
             out = np.max(out)
             return out
         else:
-            self.log.error('COMPONENT << %s >> not found' %component)
+            self.log.error('COMPONENT << %s >> not found' % component)
 
     def min(self, component='m'):
         out = getattr(self, component, None)
@@ -124,15 +126,31 @@ class data(object):
             out = np.min(out)
             return out
         else:
-            self.log.error('COMPONENT << %s >> not found' %component)
+            self.log.error('COMPONENT << %s >> not found' % component)
 
-
-    ### calculations
-    def __sub__(self, other):#
+    def diff(self, strength=1):
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
-        self_copy.measurement -= other.measurement
+
+        aux = [[self_copy.variable[i],
+             np.array((self_copy.measurement[i - strength] - self_copy.measurement[i + strength]) / (
+             self_copy.variable[i - strength] - self_copy.variable[i + strength]))]
+            for i in range(strength, len(self_copy.variable) - strength)]
+
+        self_copy.variable = np.array([ i[0] for i in aux])
+        self_copy.measurement = np.array([ i[1] for i in aux])
+
+        return self_copy
+
+    ### calculations
+    def __sub__(self, other):  #
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                                   copy.deepcopy(self.measurement),
+                                   copy.deepcopy(self.time))
+        self_copy.measurement = np.array(
+            [self_copy.measurement[i] - other.measurement[i] for i in range(len(self_copy.measurement))
+             if self_copy.variable[i] == other.variable[i]])
         return self_copy
 
     def __add__(self, other):
