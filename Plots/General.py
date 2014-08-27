@@ -28,14 +28,15 @@ class Plot(object):
         params = {'backend': 'ps',
                   'text.latex.preamble': [r"\usepackage{upgreek}",
                                           r"\usepackage[nice]{units}"],
-                  'axes.labelsize': 12,
-                  'text.fontsize': 12,
+                  'axes.labelsize': 16,
+                  'text.fontsize': 16,
                   'legend.fontsize': 8,
                   'xtick.labelsize': 10,
                   'ytick.labelsize': 10,
                   # 'text.usetex': True,
                   'axes.unicode_minus': True,
                   'axes.color_cycle' : self.colors}
+
         plt.rcParams.update(params)
 
         self.x_label = None
@@ -63,7 +64,7 @@ class Plot(object):
         self.norm = norm
         self.samples = [i for i in samples_list]
 
-        self.fig1 = options.get('fig', plt.figure(figsize=(8, 8), dpi=100))
+        self.fig1 = options.get('fig', plt.figure(figsize=(8, 6), dpi=100))
 
         self.ax = plt.subplot2grid((1, 1), (0, 0), colspan=1, rowspan=1)
         self.plot_data = []
@@ -391,8 +392,11 @@ class Dunlop(Plot):
     # self, samples_list, norm='mass', log=None, 
     # plot='show', folder=None, name='hysteresis',
     # plt_opt={}, **options)
-    def __init__(self, sample_obj, component='m', norm='mass', log=None, plot='show', folder=None,
-                 name='dunlop plot', **plt_opt):
+    def __init__(self, sample_obj,
+                 component='m',
+                 norm='mass', log=None,
+                 plot='show', folder=None, name='dunlop plot',
+                 plt_opt={}, **options):
         # todo homogenize with def plot
         '''
 
@@ -441,7 +445,7 @@ class Dunlop(Plot):
                 paleointensity.add_dunlop_labels(palint_object=measurement, ax=self.ax,
                                                  norm=norm, norm_factor=norm_factor,
                                                  text=True, plt_idx=idx)
-                self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
+            self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
             plt.tight_layout(pad=2.7)
 
         self.out(plot, 'nolable')

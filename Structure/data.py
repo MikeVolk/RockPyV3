@@ -35,7 +35,7 @@ class tensor():
 
 
 class data(object):
-    def __init__(self, variable, measurement, time=None):
+    def __init__(self, variable, measurement, std_dev = None, time=None):
         '''
         Generic 3D / 1D data containe with rudimentary functions concerning paleomagnetic data
         '''
@@ -43,7 +43,7 @@ class data(object):
         self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
         self.variable = variable
         self.measurement = measurement
-
+        self.std_dev = std_dev
         if time is None:
             time = np.empty(len(variable))
 
@@ -148,9 +148,17 @@ class data(object):
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
-        self_copy.measurement = np.array(
-            [self_copy.measurement[i] - other.measurement[i] for i in range(len(self_copy.measurement))
-             if self_copy.variable[i] == other.variable[i]])
+
+        if isinstance(other, data):
+            self_copy.measurement = np.array(
+                [self_copy.measurement[i] - other.measurement[i] for i in range(len(self_copy.measurement))
+                 if self_copy.variable[i] == other.variable[i]])
+
+        if isinstance(other, np.ndarray):
+            try:
+                self_copy.measurement -= other
+            except:
+                print 'nope'
         return self_copy
 
     def __add__(self, other):
@@ -161,3 +169,70 @@ class data(object):
         self_copy.measurement += other.measurement
         return self_copy
 
+    def __div__(self, other):
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                                   copy.deepcopy(self.measurement),
+                                   copy.deepcopy(self.time))
+
+        if isinstance(other, data):
+            self_copy.measurement = np.array(
+                [self_copy.measurement[i] / other.measurement[i] for i in range(len(self_copy.measurement))
+                 if self_copy.variable[i] == other.variable[i]])
+
+        if isinstance(other, np.ndarray):
+            self_copy.measurement /= other
+
+        return self_copy
+
+    def equal_var(self, other):
+        '''
+        returns data object that has only the same variables as the other data_obj
+        '''
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                                   copy.deepcopy(self.measurement),
+                                   copy.deepcopy(self.time))
+
+        idx = [i for i in range(len(self_copy.variable)) if self_copy.variable[i] not in other.variable] # indices of self, not in common with other
+
+        if idx:
+            self.log.info('FOUND different variables deleting << %i >> non-equal' %len(idx))
+            for i in idx:
+                self_copy.variable = np.delete(self_copy.variable, i)
+                self_copy.measurement = np.delete(self_copy.measurement, i, axis=0)
+                self_copy.time = np.delete(self_copy.time, i)
+
+        return self_copy
+
+
+    def retrieve(self, idx):
+        return self.variable[idx], self.measurement[idx], self.time[idx]
+
+    def append(self, idx):
+        pass
+
+    def slice_range(self, low_lim=None, up_lim=None):
+        '''
+        Generates a copy of data with data within the specified range of variables (inclusive)
+
+        :param low_lim:
+        :param up_lim:
+        :rtype : data_obj
+        '''
+
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                                   copy.deepcopy(self.measurement),
+                                   copy.deepcopy(self.time))
+        if low_lim is None:
+            low_lim = min(self_copy.variable)
+        if up_lim is None:
+            up_lim = max(self_copy.variable)
+
+        idx = [i for i in range(len(self_copy.variable)) if self_copy.variable[i] < low_lim if self_copy.variable[i] > up_lim]
+        if idx:
+            self.log.debug('FOUND variables not within specified range deleting << %i >> non-equal' %len(idx))
+            for i in idx:
+                self_copy.variable = np.delete(self_copy.variable, i)
+                self_copy.measurement = np.delete(self_copy.measurement, i)
+                self_copy.time = np.delete(self_copy.time, i)
+
+        return self_copy

@@ -57,15 +57,17 @@ def sushibar(file, sample, *args, **options):
     log = logging.getLogger('RockPy.READIN.sushibar')
     log.info('IMPORTING\t automag file: << %s >>' % file)
 
-    floats = ['dspin', 'ispin', 'par1', 'dip', 'dipdir', 'geoaz', 'm', 'strat_level', 'a95', 'par5', 'par4', 'par3', 'par2', 'sm', 'par6', 'dg', 'is', 'hade', 'dc', 'npos', 'bl diff/sample', 'y', 'x', 'ic', 'z', 'ds', 'ig']
+    floats = ['dspin', 'ispin', 'par1', 'dip', 'dipdir', 'geoaz', 'm', 'strat_level', 'a95', 'par5', 'par4', 'par3',
+              'par2', 'sm', 'par6', 'dg', 'is', 'hade', 'dc', 'npos', 'bl diff/sample', 'y', 'x', 'ic', 'z', 'ds', 'ig']
 
     data_f = open(file)
     data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
+
     header = ['sample', 'site', 'type', 'run', 'time', 'x', 'y', 'z', 'M', 'Dc', 'Ic', 'Dg', 'Ig', 'Ds', 'Is',
               'a95', 'sM', 'npos', 'Dspin', 'Ispin', ' holder/sample', 'cup/sample', 'bl diff/sample', 'steps/rev',
               'par1', 'par2', 'par3', 'par4', 'par5', 'par6', 'strat_level', 'geoaz', 'hade', 'dipdir', 'dip']
 
-    sample_data = np.array([i for i in data[2:-1] if i[0] == sample or sample in i[9]])
+    sample_data = np.array([i for i in data[2:] if i[0] == sample or sample in i[9]])
 
     if len(sample_data) == 0:
         log.error('UNKNOWN\t sample << %s >> can not be found in measurement file' % sample)
@@ -173,16 +175,20 @@ def cryo_nl2(file, sample, *args, **options):
     floats = ['x', 'y', 'z', 'm', 'sm', 'a95', 'dc', 'ic', 'dg', 'ig', 'ds', 'is']
     data_f = open(file)
     data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
+
     header = ['name', 'coreaz', 'coredip', 'bedaz', 'beddip',
               'vol', 'weight', 'step', 'type', 'comment',
               'time', 'mode', 'x', 'y', 'z',
               'M', 'sM', 'a95', 'Dc', 'Ic', 'Dg', 'Ig', 'Ds', 'Is']
-
     sample_data = np.array([i for i in data[2:-1] if i[0] == sample or sample in i[9] if i[11] == 'results'])
-    holder_data = np.array([i for i in data[2:-1] if i[0] == 'acryl' if i[11] == 'results'])
 
-    out = {header[i].lower(): sample_data[:, i] for i in range(len(header))}
-    out['acryl'] = {header[i].lower(): holder_data[:, i] for i in range(len(header))}
+    holder_data = np.array([i for i in data[2:-1] if i[0].lower() == 'acryl' if i[11] == 'results'])
+
+    try:
+        out = {header[i].lower(): sample_data[:, i] for i in range(len(header))}
+        out['acryl'] = {header[i].lower(): holder_data[:, i] for i in range(len(header))}
+    except IndexError:
+        log.error('CANT find sample/holder')
 
     for i in floats:
         out[i] = map(float, out[i])

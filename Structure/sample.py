@@ -142,6 +142,7 @@ class TTGroup(SampleGroup):
         return out
 
     def get_fill_nan(self, measurement, temps, step):
+
         aux = getattr(measurement, step.lower())
         out = []
         for i in temps:
@@ -159,7 +160,6 @@ class TTGroup(SampleGroup):
         returns only the data (normalized), where a measurement was done at a common temperature.
         Replaces T-step with nan
         '''
-
         temps = self.get_temps(measurements=measurements, step=step)
         data = np.array([self.get_fill_nan(measurement, temps, step)[:, 0:6] for measurement in measurements])
 
@@ -171,9 +171,7 @@ class TTGroup(SampleGroup):
                                     1
                               ]
                               for measurement in measurements])
-
         data /= norm_data
-
         return data
 
     def get_temps(self, measurements, step):
@@ -229,8 +227,8 @@ class TTGroup(SampleGroup):
     def get_statistics(self, component='m', t_min=20, t_max=700,
                        rtn='print', folder=None, name='paleointensity_statistics.stats.csv',
                        **options):
-        measurements = self.get_all_measurements(mtype='thellier')
-        treatments = self.get_treatment_for_mtype(mtype='thellier')
+        measurements = self.get_all_measurements(mtype='palint')
+        treatments = self.get_treatment_for_mtype(mtype='palint')
         if not '.csv' in name:
             name +='.csv'
         if folder is None:
@@ -239,7 +237,9 @@ class TTGroup(SampleGroup):
 
         out = []
         hdr = ['sample', 'treatment']
+
         hdr += measurements[0].print_statistics_table(component, t_min, t_max, header=False, csv_header=True)
+
         out.append(hdr)
         for treat in treatments:  # getting measurements with the same treatments
             measurements_treat = [i for i in measurements if i.treatment.label == treat]
@@ -275,6 +275,7 @@ class TTGroup(SampleGroup):
         for treat in treatments:  # getting measurements with the same treatments
             measurements_treat = [i for i in measurements if i.treatment.label == treat]
             TT_obj = sample_obj.add_measurement(mtype='palint', mfile='', machine='')
+
             TT_obj.nrm = self.get_data_mean(measurements=measurements_treat, step='nrm')
             TT_obj.trm = self.get_data_mean(measurements=measurements_treat, step='trm')
 
@@ -513,6 +514,7 @@ class Sample():
                                                      mtype=mtype, mfile=mfile, machine=machine,
                                                      mag_method = mag_method,
                                                      af_obj = af_obj, parm_obj = parm_obj,
+                                                     **options
                                                      )
             self.measurements.append(measurement)
             return measurement
@@ -610,8 +612,8 @@ def sample_import(sample_file, mass_unit='mg', length_unit='mm'):
     log = logging.getLogger('RockPy.READIN.get_data')
     reader_object = csv.reader(open(sample_file), delimiter='\t')
     r_list = [i for i in reader_object]
+    print r_list
     header = r_list[0]
-
     d_dict = {i[0]: {header[j].lower(): float(i[j]) for j in range(1, len(i))} for i in r_list[1:]}
 
     out = {}

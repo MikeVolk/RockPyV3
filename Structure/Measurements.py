@@ -17,8 +17,9 @@ from scipy.interpolate import UnivariateSpline
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 import csv
+import time
 
-# data [variable, x,y,z,m, (time)]
+# data [variable, x,y,z,m, (time)] - no dataclass
 class Measurement(object):
     def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
 
@@ -39,6 +40,7 @@ class Measurement(object):
         ''' initial state '''
         self.is_raw_data = None
         self.initial_state = None
+        self.initial_state_data = None
 
         if mtype.lower() in implemented:
             self.log.debug('FOUND\t measurement type: << %s >>' % mtype.lower())
@@ -67,7 +69,7 @@ class Measurement(object):
                                     'parm-spectra': machines.sushibar,
                                     'nrm': machines.sushibar,  # externally applied magnetization
                                     'trm': machines.sushibar,  # externally applied magnetization
-                                    'irm': machines.sushibar,  #externally applied magnetization
+                                    'irm': machines.sushibar,  # externally applied magnetization
                                     'arm': machines.sushibar,  #externally applied magnetization
         },
                        'vsm': {'hys': machines.vsm,
@@ -108,10 +110,14 @@ class Measurement(object):
     def add_initial_state(self,
                           mtype, mfile, machine,  # standard
                           **options):
+        initial_state = options.get('initial_variable', 0.0)
         self.log.info(' ADDING  initial state to measurement << %s >> data' % self.mtype)
         self.is_raw_data = self.import_data(machine=machine, mfile=mfile, mtype=mtype, rtn_raw_data=True)
         components = ['x', 'y', 'z', 'm']
-        self.initial_state = np.array([self.is_raw_data[i] for i in components])
+        self.initial_state = np.array([self.is_raw_data[i] for i in components]).T
+        self.initial_state = np.c_[initial_state, self.initial_state]
+        self.initial_state_data = data.data(0, self.initial_state[:,:3], self.is_raw_data['time'], self.is_raw_data['sm'])
+        self.__dict__.update({mtype:self.initial_state})
 
 
     def add_treatment(self, ttype, options=None):
@@ -163,25 +169,27 @@ class Measurement(object):
             'th': getattr(self, 'th', None),
             'pt': getattr(self, 'pt', None),
             'ptrm': getattr(self, 'ptrm', None),
+            'initial_state': getattr(self, 'initial_state_data', None),
+            'i_s': getattr(self, 'initial_state', None),
         }
         norm_factor = implemented[norm.lower()]
+        print norm_factor
+        data = getattr(self, dtype)
+        # try:
+        # self.log.info(' Normalizing datatype << %s >> by << %s [ %.3e ]>>' % (dtype, norm, norm_factor))
+        out = data / norm_factor
+        return out
+        # except:
+        #     self.log.error('CANT normalize by data-type << %s >>' % dtype)
+        #     self.log.warning('RETURNING NON NORMALIZED data-type << %s >>' % dtype)
+        #     return data
 
-        try:
-            self.log.info(' Normalizing datatype << %s >> by << %s [ %.3e ]>>' % (dtype, norm, norm_factor))
-            data = getattr(self, dtype)
-            out = data / norm_factor
-            return out
-        except:
-            self.log.error('CANT normalize by data-type << %s >>' % dtype)
-            self.log.warning('RETURNING NON NORMALIZED data-type << %s >>' % dtype)
-            return data
 
-
-# data [af_field, x,y,z,m]
+# data_object [af_field, x,y,z, sm, time]
 class Af_Demag(Measurement):
     def __init__(self, sample_obj,
                  mtype, mfile, machine,  # standard
-                 mag_method,  #measurement specific
+                 mag_method,  # measurement specific
                  **options):
         log = 'RockPy.MEASUREMENT.af-demag'
         super(Af_Demag, self).__init__(sample_obj, mtype, mfile, machine, log)
@@ -191,7 +199,7 @@ class Af_Demag(Measurement):
         try:
             self.raw_data.pop('sample')
             self.__dict__.update(self.raw_data)
-            self.__dict__['fields'] = self.__dict__.pop('par1')
+            self.fields = self.__dict__.pop('par1')
         except AttributeError:
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
@@ -204,19 +212,19 @@ class Af_Demag(Measurement):
     @property
     def data(self):
         measurement = np.c_[self.x, self.y, self.z]
-        out = data.data(self.fields, measurement)
+        out = data.data(variable=self.fields, measurement=measurement, std_dev=self.sm, time=self.time)
         return out
 
     # old data format
     # def data(self):
-    #     out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+    # out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
     #     return out.T
 
     def plot(self):
         RPplt.Af_Demag(self.sample_obj)
 
 
-#data [af_field, x,y,z,m]
+# data [af_field, x,y,z,m]
 class pARM_spectra(Measurement):
     # general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
 
@@ -246,8 +254,13 @@ class pARM_spectra(Measurement):
 
     @property
     def data(self):
-        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
-        return out.T
+        measurement = np.c_[self.x, self.y, self.z]
+        out = data.data(self.fields, measurement)
+        return out
+
+    # def data(self):
+    #     out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+    #     return out.T
 
     def subtract_af3(self):
         self.log.info('SUBTRACTING\t AF3 data of pARM measurement')
@@ -906,6 +919,7 @@ class Viscosity(Measurement):
             if folder is not None:
                 plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
+
 #data #todo find Thellier data structure
 class Thellier(Measurement):
     '''
@@ -916,7 +930,7 @@ class Thellier(Measurement):
     def __init__(self, sample_obj,
                  mtype, mfile, machine,
                  mag_method='',
-                 lab_field=35,
+                 lab_field=35.2,
                  **options):
         log = 'RockPy.MEASUREMENT.thellier-thellier'
 
@@ -927,13 +941,12 @@ class Thellier(Measurement):
 
         if mfile:
             self.holder = self.raw_data['acryl']
-
-            self.nrm = helper.get_type(self.raw_data, 'NRM')
             self.trm = helper.get_type(self.raw_data, 'TRM')
+            self.nrm = helper.get_type(self.raw_data, 'NRM')
 
             # get_type gives - T, x, y, z, m
             self.th = helper.get_type(self.raw_data, 'TH')
-            test = data.data(self.th[:,0], self.th[:,1], self.th[:,5])
+            test = data.data(self.th[:, 0], self.th[:, 1], self.th[:, 5])
 
             ''' STDEVS for TH, PTRM, SUM '''
             # initializing #todo reaad stdev from file
@@ -973,6 +986,37 @@ class Thellier(Measurement):
             self.difference = self.calculate_difference()
 
         self.lab_field = lab_field
+
+    @property
+    def trm_data(self):
+        out = data.data(self.trm[:,0], self.trm[:,1:4], self.trm[:,-1])
+        return out
+    @property
+    def nrm_data(self):
+        out = data.data(self.nrm[:,0], self.nrm[:,1:4], self.nrm[:,-1])
+        return out
+    @property
+    def th_data(self):
+        out = data.data(self.th[:,0], self.th[:,1:4], self.th[:,-1])
+        return out
+    @property
+    def pt_data(self):
+        out = data.data(self.pt[:,0], self.pt[:,1:4], self.pt[:,-1])
+        return out
+    @property
+    def ptrm_data(self):
+        # print self.th_data.retrieve(0)
+        out = self.pt_data - self.th_data
+        return out
+    @property
+    def sum_data(self):
+        out = self.pt_data + self.th_data
+        return out
+    @property
+    def difference_data(self):
+        out = self.ptrm_data + self.th_data
+        return out
+
 
     def get_data(self, step, dtype):
         if step not in self.__dict__.keys():
@@ -1241,6 +1285,43 @@ class Thellier(Measurement):
         MAD = statistics.MAD(x, y, z)
         return MAD
 
+
+    def calculate_slope_data(self, t_min=20, t_max=700, comp = 'm', **options):
+        self.log.info('NEW CALCULATING\t sloep fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
+        #getting only same th - ptrm data
+        ptrm = self.ptrm_data.equal_var(self.th_data) # data object with equal var of th_data
+        th = self.th_data.equal_var(self.ptrm_data) # data object with equal var of ptrm_data
+        # for comp in ['x', 'y', 'z', 'm']:
+        x = getattr(ptrm.slice_range(low_lim=t_min, up_lim=t_max), comp)
+        y = getattr(th.slice_range(low_lim=t_min, up_lim=t_max), comp)
+
+        x_mean = np.mean(x)
+        y_mean = np.mean(y)
+
+        x_diff = x - x_mean
+        y_diff = y - y_mean
+
+        ''' square differences '''
+        x_diff_sq = x_diff ** 2
+        y_diff_sq = y_diff ** 2
+
+        ''' sum squared differences '''
+        x_sum_diff_sq = np.sum(x_diff_sq)
+        y_sum_diff_sq = np.sum(y_diff_sq)
+
+        mixed = x_diff * y_diff
+        mixed_sum = np.sum(x_diff * y_diff)
+        ''' calculate slopes '''
+        N = len(x)
+
+        slopes = np.sqrt(y_sum_diff_sq / x_sum_diff_sq) * np.sign(mixed_sum)
+
+        sigmas = np.sqrt((2 * y_sum_diff_sq - 2 * slopes * mixed_sum) / ( (N - 2) * x_sum_diff_sq))
+
+        y_intercept = y_mean + abs(slopes * x_mean)
+        x_intercept = - y_intercept / slopes
+        return slopes, sigmas, y_intercept, x_intercept
+
     def calculate_slope(self, t_min=20, t_max=700, **options):
         self.log.info('CALCULATING\t arai line fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
 
@@ -1272,7 +1353,6 @@ class Thellier(Measurement):
         N = len(x)
 
         slopes = np.sqrt(y_sum_diff_sq / x_sum_diff_sq) * np.sign(mixed_sum)
-
         sigmas = np.sqrt((2 * y_sum_diff_sq - 2 * slopes * mixed_sum) / ( (N - 2) * x_sum_diff_sq))
 
         y_intercept = y_mean + abs(slopes * x_mean)
@@ -1726,7 +1806,6 @@ class Thellier(Measurement):
                  xx, fp(p, xx), 'r',
         )
         plt.show()
-
 
     def export_tdt(self, folder=None, name='_output'):
 
