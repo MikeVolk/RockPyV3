@@ -19,7 +19,8 @@ from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 import csv
 from matplotlib.mlab import griddata
-import pylab
+import multiprocessing
+
 # data [variable, x,y,z,m, (time)] - no dataclass
 class Measurement(object):
     def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
@@ -39,7 +40,7 @@ class Measurement(object):
         self.normalization = {}
 
         self.raw_data = None
-        
+
         ''' initial state '''
         self.is_raw_data = None
         self.initial_state = None
@@ -112,7 +113,7 @@ class Measurement(object):
             self.log.error('UNKNOWN\t machine << %s >>' % self.machine)
 
 
-    def add_initial_state(self, #todo change to set
+    def add_initial_state(self,  # todo change to set
                           mtype, mfile, machine,  # standard
                           **options):
         initial_state = options.get('initial_variable', 0.0)
@@ -177,7 +178,7 @@ class Measurement(object):
             self.log.info('RETURNING derivative << %i >>' % derivative)
         return out
 
-    def calculate_derivative(self, what, interpolate_first = False, **options):
+    def calculate_derivative(self, what, interpolate_first=False, **options):
         """
         Calculates the derivative of a certain attribute of the class
 
@@ -212,7 +213,8 @@ class Measurement(object):
             'pt': getattr(self, 'pt', None),
             'ptrm': getattr(self, 'ptrm', None),
             'initial_state': getattr(self, 'initial_state', None),
-            'm': np.array([getattr(self, 'm', None)[0], getattr(self, 'm', None)[0], getattr(self, 'm', None)[0], getattr(self, 'm', None)[0]]),
+            'm': np.array([getattr(self, 'm', None)[0], getattr(self, 'm', None)[0], getattr(self, 'm', None)[0],
+                           getattr(self, 'm', None)[0]]),
             'x': getattr(self, 'x', None)[0],
             'y': getattr(self, 'y', None)[0],
             'z': getattr(self, 'z', None)[0],
@@ -222,11 +224,11 @@ class Measurement(object):
         try:
             norm_factor = implemented[norm.lower()]
         except KeyError:
-            self.log.error('NORMALIZATION type << %s >> not found' %(norm))
+            self.log.error('NORMALIZATION type << %s >> not found' % (norm))
             return
 
         if norm_factor is None:
-            self.log.error('NORMALIZATION type << %s >> not found' %(norm))
+            self.log.error('NORMALIZATION type << %s >> not found' % (norm))
             return
 
         data = getattr(self, dtype)
@@ -468,7 +470,7 @@ class Irm(Measurement):
         return ms
 
     def plt_irm(self):
-        plt.title('IRM acquisition of %s' %self.sample_obj.name)
+        plt.title('IRM acquisition of %s' % self.sample_obj.name)
         plt.plot(self.fields, self.rem)
         plt.xlabel('Field [T]')
         plt.ylabel('Moment')
@@ -488,11 +490,22 @@ class Irm(Measurement):
               its contribution to the bulk IRM curve.
         DP:   the dispersion parameter, expressing the coercivity distribution of a mineral phase and corresponding
               to one standard deviation of the lognormal function.
+
+        Therefore, at any given field, B, the IRM intensity of an individual magnetic mineral component can be
+        approximated using the function
+
+        :math:
+
+           IRM(B) = \frac{M_{ri}}{DP(2\pi)^{1/2}} \int_{-\infty}^{+\infty} \exp \left[ \frac{\log B - \log B_{1/2})^2}{2 DP^2}\right] d \log B
+
         '''
 
         # ## checking for options ###
         norm = options.get('norm', False)
         interpolate_first = options.get('interpolate_first', True)
+        s_reached_saturation = options.get('saturated', True)
+
+        self.log.info('CALCULATING IRM unimixing assuming sample is in saturation << %s >>' % s_reached_saturation)
 
         diff_data = self.calculate_derivative(what='log10_data', interpolate_first=interpolate_first,
                                               **options)
@@ -506,12 +519,13 @@ class Irm(Measurement):
         else:
             norm_factor = 1
 
-        std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',
+        std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',  # std for copying color to interpolated data
                         label='data',
         )
         plt.plot(interp[:, 0], interp[:, 1] / norm_factor, '--',
                  color=std.get_color(),
-                 label='interpolated',)
+                 label='interpolated',
+        )
 
         diff_label = '1st derivative'
         if interpolate_first:
@@ -528,7 +542,8 @@ class Irm(Measurement):
         plt.legend(loc='best')
         plt.show()
 
-#data #todo find Hysteresis data structure
+
+# data #todo find Hysteresis data structure
 class Hysteresis(Measurement):
     '''
     A subclass of the measurement class. It devides the raw_data give into an **down_field** and **up_field** branch.
@@ -829,7 +844,7 @@ class Hysteresis(Measurement):
         # mrs_ufi = self.uf_interp[ufi_idx, 1]
         # mrs_i = (abs(mrs_dfi) + abs(mrs_ufi) ) / 2
         # self.log.info(
-        #     'CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' % (mrs_dfi, mrs_ufi, mrs_i))
+        # 'CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' % (mrs_dfi, mrs_ufi, mrs_i))
 
         ''' non interpolated '''
         df_idx = np.argmin(self.down_field[:, 0] ** 2)
@@ -840,7 +855,7 @@ class Hysteresis(Measurement):
         self.log.info(
             'CALCULATING\t Mrs from NON interpolated data: df: %.1e, uf %.1e, mean: %.2e' % (mrs_df, mrs_uf, mrs))
 
-        out = [mrs, mrs_df, mrs_uf]#[mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
+        out = [mrs, mrs_df, mrs_uf]  #[mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
         # self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
         self.log.info('RETURNING\t mrs, mrs_df, mrs_uf')
 
@@ -956,18 +971,19 @@ class Hysteresis(Measurement):
         try:
             self.virgin = np.array([i for i in self.virgin if -field_limit < i[0] < field_limit])
         except TypeError:
-            self.log.debug('CAN\'T limit virgin branch' )
+            self.log.debug('CAN\'T limit virgin branch')
 
         try:
             self.msi = np.array([i for i in self.msi if -field_limit < i[0] < field_limit])
         except TypeError:
-            self.log.debug('CAN\'T limit msi branch' )
+            self.log.debug('CAN\'T limit msi branch')
 
         try:
             self.df_interp = np.array([i for i in self.df_interp if -field_limit < i[0] < field_limit])
             self.uf_interp = np.array([i for i in self.uf_interp if -field_limit < i[0] < field_limit])
-            self.df_interp= np.array([i for i in self.df_interp if -field_limit < i[0] < field_limit])
-            self.up_field_interpolated = np.array([i for i in self.up_field_interpolated if -field_limit < i[0] < field_limit])
+            self.df_interp = np.array([i for i in self.df_interp if -field_limit < i[0] < field_limit])
+            self.up_field_interpolated = np.array(
+                [i for i in self.up_field_interpolated if -field_limit < i[0] < field_limit])
         except AttributeError:
             print self.log.error('CAN\'T limit interpolation')
 
@@ -1097,7 +1113,7 @@ class Viscosity(Measurement):
                 plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
 
-#data #todo find Thellier data structure
+# data #todo find Thellier data structure
 class Thellier(Measurement):
     '''
 
@@ -2232,9 +2248,9 @@ class Thermo_Curve(Measurement):
 
         data = getattr(self, mdir)
         aux = [
-             (data[i - strength,1:] - data[i+strength,1:]) / (
-             data[i - strength,0] - data[i + strength,0])
-            for i in range(strength, len(data[:,0]) - strength)]
+            (data[i - strength, 1:] - data[i + strength, 1:]) / (
+                data[i - strength, 0] - data[i + strength, 0])
+            for i in range(strength, len(data[:, 0]) - strength)]
         # aux = np.c_[data[:,0], aux]
         print aux
 
@@ -2269,39 +2285,38 @@ class Thermo_Curve(Measurement):
         return out
 
 
-
 class Forc(Measurement):
-
     def __fitPolySurface(self, data):
-        x,y,z = data
+        x, y, z = data
         v = np.array([np.ones(len(x)), x, y, x ** 2, y ** 2, x * y])
         mean_x = np.mean(x)
         mean_y = np.mean(y)
         coefficients, residues, rank, singval = np.linalg.lstsq(v.T, z)
-        return mean_x, mean_y, -0.5*coefficients[5], residues[0]
+        return mean_x, mean_y, -0.5 * coefficients[5], residues[0]
 
     @property
-    def return_fitting_surface(self): #todo get working
+    def return_fitting_surface(self):  #todo get working
         '''
         function generates a list (fitdata) of lists, where each of the lists contains the value of Ha, Hb and the values of the sub-surface
         :return:
         '''
 
         x_grid, y_grid = np.meshgrid(self.xi, self.yi)
-        fitdata =[[
-                    np.array(y_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),  # Ha
-                    np.array(x_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),  # Hb
-                    np.array(self.zi[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten()]  # values
-                  for Hac in xrange(self.SF, self.len_ha - self.SF)
-                  for Hbc in xrange(self.SF, self.len_hb - self.SF)]
+        fitdata = [[
+                       np.array(y_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),
+                       # Ha
+                       np.array(x_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),
+                       # Hb
+                       np.array(self.zi[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten()]
+                   # values
+                   for Hac in xrange(self.SF, self.len_ha - self.SF)
+                   for Hbc in xrange(self.SF, self.len_hb - self.SF)]
 
         # # if self.zi[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1].shape == (2 * self.SF + 1, 2 * self.SF + 1)]
         #
         # fitdata = [i for i in fitdata if np.count_nonzero(np.isnan(i[2])) < 0.5 * len(i[2].flatten())]
         fitdata = [i for i in fitdata if np.count_nonzero(np.isnan(i[2])) < 0.01 * len(i[2].flatten())]
         return np.array(fitdata)
-
-
 
 
     def __init__(self, sample_obj, mtype, mfile, machine, **options):
@@ -2315,27 +2330,38 @@ class Forc(Measurement):
 
         self.field = self.raw_data.get('Field (T)', None)
         self.moment = self.raw_data.get('Moment (Am\xb2)', None)
-        self.temperature = self.raw_data.get('Temperature (K)', np.zeros(len(self.moment)))
+
+        self.temperature = self.raw_data.get('Temperature (K)', None)
+
+        if self.temperature is None:
+            self.temperature = [np.ones(len(i)) * 295 for i in
+                                self.moment]  #generates temp = 295C data if temp data not in data file
 
         nforc = int(self.raw_data['SCRIPT']['NForc'])
         start = len(self.field) - 2 * nforc
 
+        self.log.debug('GENERATING << drift >> data')
         self.drift = np.array(
-            [np.c_[[float(self.field[i]), float(self.moment[i]), float(self.temperature[i])]] for i in range(start, len(self.moment)) if
+            [np.c_[[float(self.field[i]), float(self.moment[i]), float(self.temperature[i])]] for i in
+             range(start, len(self.moment)) if
              (i + (start % 2)) % 2 == 0])
         self.drift = self.drift.reshape((self.drift.shape[0], self.drift.shape[1]))
         self.drift_std = np.std(self.drift, axis=0)
-        
+
+        self.log.debug('GENERATING << individual forc >> data')
         self.forcs = np.array(
-            [np.array([self.field[i], self.moment[i]]) for i in range(start, len(self.moment)) #todo temperature
+            [np.array([self.field[i], self.moment[i]]) for i in range(start, len(self.moment))  #todo temperature
              if (i + (start % 2)) % 2 != 0])
 
         self.len_ha = len(self.forcs)
         self.len_hb = max([len(i) for i in self.moment])
 
-        self.field_spacing_aux = np.array([np.diff(self.field[i]) for i in range(start, len(self.moment)) if (i + (start % 2)) % 2 != 0][1:]).flatten()
+        self.log.debug('GENERATING << field_spacing >> data')
+        self.field_spacing_aux = np.array(
+            [np.diff(self.field[i]) for i in range(start, len(self.moment)) if (i + (start % 2)) % 2 != 0][
+            1:]).flatten()
 
-        self.field_spacing = np.array([j for i in self.field_spacing_aux for j in i[1:-1] ])
+        self.field_spacing = np.array([j for i in self.field_spacing_aux for j in i[1:-1]])
 
         self.field_spacing_first = np.array([i[0] for i in self.field_spacing_aux])
         self.field_spacing_last = np.array([i[-1] for i in self.field_spacing_aux])
@@ -2344,6 +2370,8 @@ class Forc(Measurement):
         forc_data = []
         hysteresis_df = []
         hysteresis_uf = []
+
+        self.log.debug('GENERATING << forc, mirrored forc >> data')
 
         for i in self.forcs:
             ha = i[0][0]
@@ -2357,36 +2385,82 @@ class Forc(Measurement):
                 aux = np.array([ha, hb, mhb])
                 forc_data.append(aux)
                 if not j == 0:
-                    mirror = np.array([aux[0], 2*aux[0]-aux[1], 2*mha - mhb]) #todo incorp temperature
+                    mirror = np.array([aux[0], 2 * aux[0] - aux[1], 2 * mha - mhb])  #todo incorp temperature
                     forc_data.append(mirror)
-
 
         self.forc_data = np.array(forc_data)
         self.hysteresis_df = np.array(hysteresis_df)
         self.hysteresis_uf = self.forcs[-1]
+
+        #todo calculate backfield from data and add coe measurement
+        self.backfield = self.calculate_backfield()
+        #todo calculate hysteresis from data
         # print self.forcs[-1]
         # self.backfield = np.array(backfield)
 
-        y = self.forc_data[:, 0] # Ha
-        x = self.forc_data[:, 1] # Hb
+        y = self.forc_data[:, 0]  # Ha
+        x = self.forc_data[:, 1]  # Hb
         z = self.forc_data[:, 2]
 
         self.xi = np.linspace(self.min_Hb, self.max_Hb, self.len_hb)
-        self.yi = np.linspace(self.min_Ha, self.max_Ha, self.len_hb)
-        # grid the data
-        self.zi = griddata(x, y, z, self.xi, self.yi, interp='linear')
+        self.yi = np.linspace(self.min_Ha, self.max_Ha, self.len_ha)
+        self.zi = griddata(x, y, z, self.xi, self.yi, interp='linear')  # grid the data
+
+    def calculate_backfield(self):
+        '''
+        calculates backfield component from forc data. Returns data with [ha, m(B=0), sm(from regression)]
+        M(B=0) is calculated using a linear regression around 0 (+- 3 data points) for each forc branch.
+        :return: ndarray
+        '''
+        self.log.info('CALCULATING << backfield >> from forc')
+
+        aux = []
+        n= 0
+        for i in self.forcs:
+            n += 1
+            idx = np.argmin(np.fabs(i[0]))
+            ha = min(i[0])
+            if ha < 0:
+                x = i[0][idx - 3:idx + 3]
+                y = i[1][idx - 3:idx + 3]
+                if len(x) >0:
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+                    mx = x.mean()
+                    # my = y.mean()
+                    sx2 = sum(((x - mx) ** 2))
+                    i = np.sqrt(1./ sx2)
+
+                    # sxy = sum((x-mx)*(y-my))
+                    # slope = sxy / sx2
+                    # intercept = my - slope * mx
+                    # y_new = x * slope + intercept
+                    # sse = sum((y-y_new)**2)
+                    # std_err = sse / (len(x)-2)
+                    sd_intercept = (std_err/i) * np.sqrt(1. / len(x) + mx ** 2 * mx / sx2)
+                    aux.append(np.array([ha, intercept, 2*sd_intercept]))
+        out = np.array(aux)
+        return out
 
     def calculate_forc(self, SF=3, **options):
-        self.log.info('CACULATING forc data with smoothing factor << %i >>' %SF)
+        self.log.info('CACULATING forc data with smoothing factor << %i >>' % SF)
         self.SF = SF
+
+        #todo multiprocessing
+        # pool = multiprocessing.Pool(processes=6)
+        # self.fitted_forc_data = np.array(pool.map(self.__fitPolySurface, self.return_fitting_surface))
+        # pool.close()
         self.fitted_forc_data = np.array(map(self.__fitPolySurface, self.return_fitting_surface))
 
     def plt_backfield(self):
         # print self.backfield
-        plt.axhline(color = '#808080')
-        plt.axvline(color = '#808080')
-        plt.plot(self.backfield[:,0], self.backfield[:,1], '.-')
-        plt.xlim([min(self.backfield[:,0]), max(self.backfield[:,0])])
+        plt.axhline(color='#808080')
+        plt.axvline(color='#808080')
+        plt.plot(self.backfield[:, 0], self.backfield[:, 1], '.-')
+        plt.xlim([min(self.backfield[:, 0]), max(self.backfield[:, 0])])
+        plt.title('Backfield: %s' %self.sample_obj.name)
+        plt.xlabel('Field [T]')
+        plt.ylabel('Moment')
         plt.show()
 
 
@@ -2403,33 +2477,34 @@ class Forc(Measurement):
             return
 
         for fl in self.fitted_forc_data:
-            Hu = (fl[0]+fl[1])/2
-            Hc = (fl[1]-fl[0])/2
+            Hu = (fl[0] + fl[1]) / 2
+            Hc = (fl[1] - fl[0]) / 2
 
             newfl = (Hc, Hu, fl[2], fl[3])
 
             if HcHudata == None:
-                HcHudata = np.reshape( newfl, (1, len( newfl))) # reshape needed to form 2D array
+                HcHudata = np.reshape(newfl, (1, len(newfl)))  # reshape needed to form 2D array
             else:
-                HcHudata = np.vstack(( HcHudata, newfl)) # append line to array
+                HcHudata = np.vstack(( HcHudata, newfl))  # append line to array
 
         return HcHudata
 
 
-        
     @property
     def min_Ha(self):
-        return min(self.forc_data[:,0])
+        return min(self.forc_data[:, 0])
+
     @property
     def min_Hb(self):
-        return min(self.forc_data[:,1])
+        return min(self.forc_data[:, 1])
 
     @property
     def max_Ha(self):
-        return max(self.forc_data[:,0])
+        return max(self.forc_data[:, 0])
+
     @property
     def max_Hb(self):
-        return max(self.forc_data[:,1])
+        return max(self.forc_data[:, 1])
 
     def plt_forcs(self, n=5):
 
@@ -2438,8 +2513,8 @@ class Forc(Measurement):
             )
         MX = max([max(i[0]) for i in self.forcs])
         MXy = max([max(i[1]) for i in self.forcs])
-        plt.xlim(-MX,MX)
-        plt.ylim(-MXy,MXy)
+        plt.xlim(-MX, MX)
+        plt.ylim(-MXy, MXy)
         plt.show()
 
     def plt_ha_hb_space(self):
@@ -2447,9 +2522,9 @@ class Forc(Measurement):
         plt.contourf(self.xi, self.yi, self.zi, 30, cmap=plt.cm.get_cmap("jet"))
 
         #plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='jet')
-        plt.colorbar() # draw colorbar
-        plt.xlabel( 'Hb')
-        plt.ylabel( 'Ha')
+        plt.colorbar()  # draw colorbar
+        plt.xlabel('Hb')
+        plt.ylabel('Ha')
         plt.title('FORC raw data (magnetic moments)')
         plt.axis('equal')
         plt.show()
@@ -2460,9 +2535,10 @@ class Forc(Measurement):
 
         """
         plt.title('Statistical distribution of Field Steps')
-        plt.hist(self.field_spacing_first, 50, normed=0, facecolor='red', alpha=0.5, log = True, label ='first')
-        n, bins, patches = plt.hist(self.field_spacing, 50, normed=0, facecolor='green', alpha=0.5, log = True, label ='other')
-        plt.hist(self.field_spacing_last, 50, normed=0, facecolor='blue', alpha=0.5, log = True, label ='last')
+        plt.hist(self.field_spacing_first, 50, normed=0, facecolor='red', alpha=0.5, log=True, label='first')
+        n, bins, patches = plt.hist(self.field_spacing, 50, normed=0, facecolor='green', alpha=0.5, log=True,
+                                    label='other')
+        plt.hist(self.field_spacing_last, 50, normed=0, facecolor='blue', alpha=0.5, log=True, label='last')
         plt.xlabel('Step size [T]')
         plt.ylabel('Number of steps')
         plt.legend()
@@ -2474,9 +2550,9 @@ class Forc(Measurement):
         plots the saturating field and standard deviation
 
         """
-        plt.plot(range(len(self.drift[:,0])), self.drift[:,0], '.')
-        plt.plot(range(len(self.drift[:,0])), self.drift[:,0]+ self.drift_std[0], '-', color='r', alpha =0.4)
-        plt.plot(range(len(self.drift[:,0])), self.drift[:,0]- self.drift_std[0], '-', color='r', alpha =0.4)
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0], '.')
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0], '-', color='r', alpha=0.4)
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] - self.drift_std[0], '-', color='r', alpha=0.4)
         plt.fill_between(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0],
                          self.drift[:, 0] - self.drift_std[0],
                          color='r', alpha=0.2)
@@ -2487,20 +2563,20 @@ class Forc(Measurement):
         plots the saturation moment and standard deviation
 
         """
-        data = self.drift[:,1] / max(self.drift[:,1])
+        data = self.drift[:, 1] / max(self.drift[:, 1])
         plt.plot(range(len(data)), data, '.')
-        plt.plot(range(len(data)), data+ self.drift_std[1]/ max(self.drift[:,1]), '-', color='r', alpha =0.4)
-        plt.plot(range(len(data)), data- self.drift_std[1]/ max(self.drift[:,1]), '-', color='r', alpha =0.4)
-        plt.fill_between(range(len(data)), data + self.drift_std[1]/ max(self.drift[:,1]),
-                         data - self.drift_std[1]/ max(self.drift[:,1]),
+        plt.plot(range(len(data)), data + self.drift_std[1] / max(self.drift[:, 1]), '-', color='r', alpha=0.4)
+        plt.plot(range(len(data)), data - self.drift_std[1] / max(self.drift[:, 1]), '-', color='r', alpha=0.4)
+        plt.fill_between(range(len(data)), data + self.drift_std[1] / max(self.drift[:, 1]),
+                         data - self.drift_std[1] / max(self.drift[:, 1]),
                          color='r', alpha=0.2)
         plt.xlim(0, len(data))
         plt.xlabel('calibration measurement number')
         plt.ylabel('moment calibration value')
         plt.show()
-        
+
     def plt_forc(self, SF=3):
-            
+
         if self.fitted_forc_data is None:
             self.log.warning('NO fitted data found, fitting data with smoothing factor << 3 >>')
             self.calculate_forc(SF=SF)
@@ -2550,26 +2626,26 @@ class Forc(Measurement):
         # contour the gridded data
         norm = MidpointNormalize(midpoint=0)
         plt.contourf(xi, yi, zi, 50,
-                     norm = norm,
+                     norm=norm,
                      # cmap=plt.cm.get_cmap("RdBu_r"),
                      cmap=plt.cm.seismic
-                     )
+        )
 
         # plt.axhline(0, color='black')
-        plt.colorbar() # draw colorbar
+        plt.colorbar()  # draw colorbar
         # plot data points.
-        plt.xlabel( 'Hc')
-        plt.ylabel( 'Hu')
+        plt.xlabel('Hc')
+        plt.ylabel('Hu')
         # show data points
         #plt.scatter( x, y)
         plt.title('FORC processed (SF=%d)' % self.SF)
         #plt.axis('equal')
         plt.axis('scaled')
 
-        plt.xlim( [sorted(xi)[50], xi.max()])
-        plt.ylim( [sorted(yi)[50], yi.max()])
+        plt.xlim([sorted(xi)[50], xi.max()])
+        plt.ylim([sorted(yi)[50], yi.max()])
         #plt.savefig( fname + '.png')
-    
+
         plt.show()
 
     def plt_residuals(self):
@@ -2586,22 +2662,22 @@ class Forc(Measurement):
         # contour the gridded data
         plt.contourf(xi, yi, zi, 50, cmap=plt.cm.get_cmap("jet"))
         plt.axhline(0, color='black')
-        plt.colorbar() # draw colorbar
+        plt.colorbar()  # draw colorbar
         # plot data points.
-        plt.xlabel( 'Hc')
-        plt.ylabel( 'Hu')
+        plt.xlabel('Hc')
+        plt.ylabel('Hu')
         # show data points
         #plt.scatter( x, y)
         plt.title('FORC processed (SF=%d)' % self.SF)
         #plt.axis('equal')
 
-        plt.xlim( [0, 0.1])
-        plt.ylim( [-0.1, 0.03])
+        plt.xlim([0, 0.1])
+        plt.ylim([-0.1, 0.03])
         #plt.savefig( fname + '.png')
 
         plt.show()
 
     def plt_hysteresis(self):
-        plt.plot(self.hysteresis_df[:,0], self.hysteresis_df[:,1])
+        plt.plot(self.hysteresis_df[:, 0], self.hysteresis_df[:, 1])
         plt.plot(self.hysteresis_uf[0], self.hysteresis_uf[1])
         plt.show()
