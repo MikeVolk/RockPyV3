@@ -2,6 +2,7 @@
 __author__ = 'Mike'
 
 from RockPyV3.Functions import general
+from RockPyV3 import Functions
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
 
@@ -17,8 +18,10 @@ from scipy.interpolate import UnivariateSpline
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 import csv
+from matplotlib.mlab import griddata
+import multiprocessing
 
-# data [variable, x,y,z,m, (time)]
+# data [variable, x,y,z,m, (time)] - no dataclass
 class Measurement(object):
     def __init__(self, sample_obj, mtype, mfile, machine, log=None, **options):
 
@@ -28,7 +31,8 @@ class Measurement(object):
             self.log = logging.getLogger(log)
 
         implemented = ['af-demag', 'af', 'parm-spectra',
-                       'hys', 'irm', 'coe',
+                       'hys', 'irm', 'coe', 'rmp',
+                       'forc',
                        'palint', 'thellier', 'pseudo-thellier',
                        'zfc', 'fc',
                        'visc',
@@ -36,6 +40,7 @@ class Measurement(object):
         self.normalization = {}
 
         self.raw_data = None
+
         ''' initial state '''
         self.is_raw_data = None
         self.initial_state = None
@@ -67,20 +72,22 @@ class Measurement(object):
                                     'parm-spectra': machines.sushibar,
                                     'nrm': machines.sushibar,  # externally applied magnetization
                                     'trm': machines.sushibar,  # externally applied magnetization
-                                    'irm': machines.sushibar,  #externally applied magnetization
-                                    'arm': machines.sushibar,  #externally applied magnetization
+                                    'irm': machines.sushibar,  # externally applied magnetization
+                                    'arm': machines.sushibar,  # externally applied magnetization
         },
                        'vsm': {'hys': machines.vsm,
                                'irm': machines.vsm,
                                'coe': machines.vsm,
-                               'visc': machines.vsm},
+                               'visc': machines.vsm,
+                               'forc': machines.vsm_forc},
                        'cryo_nl': {'palint': machines.cryo_nl2},
                        'mpms': {'zfc': machines.mpms,
                                 'fc': machines.mpms, },
                        'simulation': {'palint': machines.simulation,
                        },
                        'vftb': {'hys': machines.vftb,
-                                'coe': machines.vftb}}
+                                'coe': machines.vftb,
+                                'rmp': machines.vftb}}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
 
@@ -105,13 +112,17 @@ class Measurement(object):
         else:
             self.log.error('UNKNOWN\t machine << %s >>' % self.machine)
 
-    def add_initial_state(self,
+
+    def add_initial_state(self,  # todo change to set
                           mtype, mfile, machine,  # standard
                           **options):
+        initial_state = options.get('initial_variable', 0.0)
         self.log.info(' ADDING  initial state to measurement << %s >> data' % self.mtype)
         self.is_raw_data = self.import_data(machine=machine, mfile=mfile, mtype=mtype, rtn_raw_data=True)
         components = ['x', 'y', 'z', 'm']
-        self.initial_state = np.array([self.is_raw_data[i] for i in components])
+        self.initial_state = np.array([self.is_raw_data[i] for i in components]).T
+        self.initial_state = np.c_[initial_state, self.initial_state]
+        self.__dict__.update({mtype: self.initial_state})
 
 
     def add_treatment(self, ttype, options=None):
@@ -127,8 +138,22 @@ class Measurement(object):
         else:
             self.log.error('UNKNOWN\t treatment type << %s >> is not know or not implemented' % ttype)
 
-    def interpolate(self, what, x_new=None):
-        self.log.info('INTERPOLATIN << %s >> using interp1d (Scipy)' % what)
+
+    def interpolate(self, what, x_new=None, derivative=0):
+        """
+        from scipy.interpolate.splev(x, tck, der=0, ext=0):
+           Evaluate a B-spline or its derivatives.
+
+           Given the knots and coefficients of a B-spline representation, evaluate the value of the smoothing polynomial
+           and its derivatives. This is a wrapper around the FORTRAN routines splev and splder of FITPACK.
+
+        :param what:
+        :param x_new:
+        :param derivative : int
+                          The order of derivative of the spline to compute (must be less than or equal to k).
+        :return:
+        """
+        self.log.info('INTERPOLATIN << %s >> using splev (Scipy)' % what)
         xy = np.sort(getattr(self, what), axis=0)
         mtype = getattr(self, 'mtype')
 
@@ -142,15 +167,39 @@ class Measurement(object):
             x_new = np.linspace(min(x), max(x), 5000)
 
         fc = splrep(x, y, s=0)
-        y_new = interpolate.splev(x_new, fc, der=0)
+        y_new = interpolate.splev(x_new, fc, der=derivative)
 
         out = np.array([[x_new[i], y_new[i]] for i in range(len(x_new))])
 
         if mtype == 'coe':
             out = np.array([[-i[0], i[1]] for i in out])
         self.log.debug('INTERPOLATION READY')
+        if derivative > 0:
+            self.log.info('RETURNING derivative << %i >>' % derivative)
         return out
 
+    def calculate_derivative(self, what, interpolate_first=False, **options):
+        """
+        Calculates the derivative of a certain attribute of the class
+
+        :param what : str
+                    attribute name
+        :param interpolate_first : bool
+                                 wether the data is to be interpolated and the derivative of this is returned
+        :param options : dict
+                       options
+        :return: ndarray
+        """
+        diff = options.get('diff', 1)
+        smoothing = options.get('smoothing', 1)
+        norm = options.get('norm', True)
+
+        if interpolate_first:
+            out = self.interpolate(what=what, derivative=diff)
+        else:
+            data = getattr(self, what, None)
+            out = Functions.general.differentiate(data, diff=diff, smoothing=smoothing, norm=norm)
+        return out
 
     def normalize(self, dtype, norm, value=1, **options):
         implemented = {
@@ -163,15 +212,39 @@ class Measurement(object):
             'th': getattr(self, 'th', None),
             'pt': getattr(self, 'pt', None),
             'ptrm': getattr(self, 'ptrm', None),
+            'initial_state': getattr(self, 'initial_state', None),
+            'm': np.array([getattr(self, 'm', None)[0], getattr(self, 'm', None)[0], getattr(self, 'm', None)[0],
+                           getattr(self, 'm', None)[0]]),
+            'x': getattr(self, 'x', None)[0],
+            'y': getattr(self, 'y', None)[0],
+            'z': getattr(self, 'z', None)[0],
+            'ms': getattr(self, 'ms', None)[0],
         }
-        norm_factor = implemented[norm.lower()]
 
         try:
-            self.log.info(' Normalizing datatype << %s >> by << %s [ %.3e ]>>' % (dtype, norm, norm_factor))
-            data = getattr(self, dtype)
-            out = data / norm_factor
+            norm_factor = implemented[norm.lower()]
+        except KeyError:
+            self.log.error('NORMALIZATION type << %s >> not found' % (norm))
+            return
+
+        if norm_factor is None:
+            self.log.error('NORMALIZATION type << %s >> not found' % (norm))
+            return
+
+        data = getattr(self, dtype)
+
+        try:
+            self.log.info(' Normalizing datatype << %s >> by << %s [ %s ]>>' % (dtype, norm, np.array_str(norm_factor)))
+            out = data
+            out[:, 1:] = data[:, 1:] / norm_factor[:, 1:]
             return out
-        except:
+        except IndexError:
+            self.log.info(' Normalizing datatype << %s >> by << %s [ %s ]>>' % (dtype, norm, np.array_str(norm_factor)))
+            out = data
+            out[:, 1:] = data[:, 1:] / norm_factor
+            return out
+
+        except KeyError:
             self.log.error('CANT normalize by data-type << %s >>' % dtype)
             self.log.warning('RETURNING NON NORMALIZED data-type << %s >>' % dtype)
             return data
@@ -181,8 +254,9 @@ class Measurement(object):
 class Af_Demag(Measurement):
     def __init__(self, sample_obj,
                  mtype, mfile, machine,  # standard
-                 mag_method,  #measurement specific
+                 mag_method,  # measurement specific
                  **options):
+
         log = 'RockPy.MEASUREMENT.af-demag'
         super(Af_Demag, self).__init__(sample_obj, mtype, mfile, machine, log)
 
@@ -203,20 +277,14 @@ class Af_Demag(Measurement):
 
     @property
     def data(self):
-        measurement = np.c_[self.x, self.y, self.z]
-        out = data.data(self.fields, measurement)
-        return out
-
-    # old data format
-    # def data(self):
-    #     out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
-    #     return out.T
+        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+        return out.T
 
     def plot(self):
         RPplt.Af_Demag(self.sample_obj)
 
 
-#data [af_field, x,y,z,m]
+# data [af_field, x,y,z,m]
 class pARM_spectra(Measurement):
     # general.create_logger('RockPy.MEASUREMENT.PARM-SPECTRA')
 
@@ -246,8 +314,13 @@ class pARM_spectra(Measurement):
 
     @property
     def data(self):
-        out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
-        return out.T
+        measurement = np.c_[self.x, self.y, self.z]
+        out = data.data(self.fields, measurement)
+        return out
+
+    # def data(self):
+    # out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+    # return out.T
 
     def subtract_af3(self):
         self.log.info('SUBTRACTING\t AF3 data of pARM measurement')
@@ -267,10 +340,13 @@ class pARM_spectra(Measurement):
             self.__dict__[k] = self.__dict__[k][1:]
 
 
-#data #todo find Coe data structure
+# data #todo find Coe data structure
 class Coe(Measurement):
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
-        log = 'RockPy.MEASUREMENT.COE'
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,
+                 **options):
+
+        log = 'RockPy.MEASUREMENT.coe'
         Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         # todo homogenize input
@@ -302,6 +378,7 @@ class Coe(Measurement):
             self.info = {}
             self.measurement_settings = {'Include IRM?': 'No',
                                          'Include direct moment?': 'No'}
+
             self.fields = self.raw_data['field']
             self.rem = self.raw_data['moment']
             self.moments = np.zeros(len(self.fields))
@@ -322,11 +399,17 @@ class Coe(Measurement):
         self.bcr = self.calculate_bcr()  # in  T
         # print self.remanence_interpolated
 
+    @property
+    def ms(self):
+        ms = abs(min(self.rem))
+        return ms
+
     def calculate_bcr(self, check=False):
         '''
         Calculate using log normal gaussian distributions according to. Only one function will be fitted.
 
-        Leonhardt, R. (2006). Analyzing rock magnetic measurements: The RockMagAnalyzer 1.0 software. Computers \& Geosciences, 32(9), 1420–1431. doi:10.1016/j.cageo.2006.01.006
+        Leonhardt, R. (2006). Analyzing rock magnetic measurements: The RockMagAnalyzer 1.0 software. Computers \&
+        Geosciences, 32(9), 1420–1431. doi:10.1016/j.cageo.2006.01.006
 
         '''
         log_fields = np.log10(np.fabs(self.remanence[:, 0]))
@@ -352,23 +435,115 @@ class Coe(Measurement):
         return out
 
 
-#data #todo find Irm data structure
+# data #todo find Irm data structure
 class Irm(Measurement):
     general.create_logger('RockPy.MEASUREMENT.IRM')
 
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.IRM')
-        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,
+                 **options):
+
+        log = 'RockPy.MEASUREMENT.irm'
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         self.fields = self.raw_data[1][0][:, 0]
+        self.log10_fields = np.log10(self.fields)
         self.rem = self.raw_data[1][0][:, 1]
         self.dmom = self.raw_data[1][0][:, 2]
 
         self.remanence = np.column_stack((self.fields, self.rem))
         self.direct_moment = np.column_stack((self.fields, self.dmom))
 
+    @property
+    def data(self):
+        out = np.c_[self.fields, self.rem]
+        return out
 
-#data #todo find Hysteresis data structure
+    @property
+    def log10_data(self):
+        out = np.c_[self.log10_fields, self.rem]
+        return out
+
+    @property
+    def ms(self):
+        ms = max(self.rem)
+        return ms
+
+    def plt_irm(self):
+        plt.title('IRM acquisition of %s' % self.sample_obj.name)
+        plt.plot(self.fields, self.rem)
+        plt.xlabel('Field [T]')
+        plt.ylabel('Moment')
+        plt.show()
+
+    def plt_irm_unmixing(self, **options):
+        '''
+        Simple plotting function for IRM unmixing
+
+        Robertson & France (1994) showed that the individual magnetic mineral phases contributing to a
+        bulk IRM curve would each have an acquisition path approximating to a lognormal function, described
+        using three parameters:
+
+        B1/2: the applied field at which the mineral phase would acquire half of its saturation IRM (SIRM),
+              providing a measure of the mean coercivity of that population.
+        Mri:  the magnitude of the phase distribution, providing an indication of the component SIRM and therefore
+              its contribution to the bulk IRM curve.
+        DP:   the dispersion parameter, expressing the coercivity distribution of a mineral phase and corresponding
+              to one standard deviation of the lognormal function.
+
+        Therefore, at any given field, B, the IRM intensity of an individual magnetic mineral component can be
+        approximated using the function
+
+        :math:
+
+           IRM(B) = \frac{M_{ri}}{DP(2\pi)^{1/2}} \int_{-\infty}^{+\infty} \exp \left[ \frac{\log B - \log B_{1/2})^2}{2 DP^2}\right] d \log B
+
+        '''
+
+        # ## checking for options ###
+        norm = options.get('norm', False)
+        interpolate_first = options.get('interpolate_first', True)
+        s_reached_saturation = options.get('saturated', True)
+
+        self.log.info('CALCULATING IRM unimixing assuming sample is in saturation << %s >>' % s_reached_saturation)
+
+        diff_data = self.calculate_derivative(what='log10_data', interpolate_first=interpolate_first,
+                                              **options)
+
+        interp = self.interpolate('log10_data')
+
+        plt.title('IRM acquisition of %s' % self.sample_obj.name)
+
+        if norm:
+            norm_factor = self.rem.max()
+        else:
+            norm_factor = 1
+
+        std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',  # std for copying color to interpolated data
+                        label='data',
+        )
+        plt.plot(interp[:, 0], interp[:, 1] / norm_factor, '--',
+                 color=std.get_color(),
+                 label='interpolated',
+        )
+
+        diff_label = '1st derivative'
+        if interpolate_first:
+            diff_label += ' interpolated'
+        plt.plot(diff_data[:, 0], diff_data[:, 1],
+                 label=diff_label)
+
+        plt.xlabel('$\\log_{10}$(Field) [T]')
+        plt.ylabel('Moment')
+
+        if norm:
+            plt.ylim([0, max(self.rem / norm_factor)])
+
+        plt.legend(loc='best')
+        plt.show()
+
+
+# data #todo find Hysteresis data structure
 class Hysteresis(Measurement):
     '''
     A subclass of the measurement class. It devides the raw_data give into an **down_field** and **up_field** branch.
@@ -377,9 +552,9 @@ class Hysteresis(Measurement):
 
 
     '''
-    general.create_logger('RockPy.MEASUREMENT.HYSTERESIS')
+    # general.create_logger('RockPy.MEASUREMENT.HYSTERESIS')
 
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
+    def __init__(self, sample_obj, mtype, mfile, machine, **options):
         """
 
 
@@ -393,8 +568,8 @@ class Hysteresis(Measurement):
 
         """
 
-        self.log = logging.getLogger('RockPy.MEASUREMENT.HYSTERESIS')
-        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
+        log = 'RockPy.MEASUREMENT.HYSTERESIS'
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         if machine.lower() == 'vsm':
             self.info = self.raw_data[2]
@@ -444,18 +619,18 @@ class Hysteresis(Measurement):
 
         # indices = [np.argmin(abs(i - self.down_field[:, 0])) for i in self.up_field[:, 0]]
 
-        self.uf_interp = self.interpolate('up_field')
-        self.df_interp = self.interpolate('down_field')
-        self.down_field_interpolated = self.df_interp
-        self.up_field_interpolated = self.uf_interp
+        # self.uf_interp = self.interpolate('up_field')
+        # self.df_interp = self.interpolate('down_field')
+        # self.down_field_interpolated = self.df_interp
+        # self.up_field_interpolated = self.uf_interp
 
         self.irr = np.array(
-            [[self.uf_interp[i, 0], (self.df_interp[i, 1] - self.uf_interp[i, 1]) / 2] for i in
-             range(len(self.uf_interp))])
+            [[self.up_field[i, 0], (self.down_field[i, 1] - self.up_field[i, 1]) / 2] for i in
+             range(len(self.up_field))])
 
         self.rev = np.array(
-            [[self.uf_interp[i, 0], (self.df_interp[i, 1] + self.uf_interp[i, 1]) / 2] for i in
-             range(len(self.uf_interp))])
+            [[self.up_field[i, 0], (self.down_field[i, 1] + self.up_field[i, 1]) / 2] for i in
+             range(len(self.up_field))])
 
         self.mrs = self.calculate_mrs()
         self.ms = self.calculate_ms()
@@ -484,7 +659,8 @@ class Hysteresis(Measurement):
     def E_delta_t(self):
         '''
         Method calculates the :math:`E^{\Delta}_t` value for the hysteresis.
-        It uses scipy.integrate.simps for calculation of the area under the down_field branch for positive fields and later subtracts the area under the Msi curve.
+        It uses scipy.integrate.simps for calculation of the area under the down_field branch for positive fields and
+        later subtracts the area under the Msi curve.
         '''
         if self.msi is not None:
             df_positive = np.array([i for i in self.down_field if i[0] > 0])[::-1]
@@ -657,17 +833,18 @@ class Hysteresis(Measurement):
         out = self.up_field_interpolated[idx]
         return out
 
+
     def calculate_mrs(self, check=None):
         '''
         '''
         ''' interpoalted '''
-        dfi_idx = np.argmin(self.df_interp[:, 0] ** 2)
-        ufi_idx = np.argmin(self.uf_interp[:, 0] ** 2)
-        mrs_dfi = self.df_interp[dfi_idx, 1]
-        mrs_ufi = self.uf_interp[ufi_idx, 1]
-        mrs_i = (abs(mrs_dfi) + abs(mrs_ufi) ) / 2
-        self.log.info(
-            'CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' % (mrs_dfi, mrs_ufi, mrs_i))
+        # dfi_idx = np.argmin(self.df_interp[:, 0] ** 2)
+        # ufi_idx = np.argmin(self.uf_interp[:, 0] ** 2)
+        # mrs_dfi = self.df_interp[dfi_idx, 1]
+        # mrs_ufi = self.uf_interp[ufi_idx, 1]
+        # mrs_i = (abs(mrs_dfi) + abs(mrs_ufi) ) / 2
+        # self.log.info(
+        # 'CALCULATING\t Mrs from interpolated data: df: %.1e, uf %.1e, mean:%.2e' % (mrs_dfi, mrs_ufi, mrs_i))
 
         ''' non interpolated '''
         df_idx = np.argmin(self.down_field[:, 0] ** 2)
@@ -678,8 +855,9 @@ class Hysteresis(Measurement):
         self.log.info(
             'CALCULATING\t Mrs from NON interpolated data: df: %.1e, uf %.1e, mean: %.2e' % (mrs_df, mrs_uf, mrs))
 
-        out = [mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
-        self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
+        out = [mrs, mrs_df, mrs_uf]  #[mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
+        # self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
+        self.log.info('RETURNING\t mrs, mrs_df, mrs_uf')
 
         if check:
             plt.axhline(0, color='black')
@@ -729,6 +907,7 @@ class Hysteresis(Measurement):
 
         return out
 
+
     def calculate_sigma_hys(self):
         '''
         Calculation accoding to Fabian2003
@@ -743,6 +922,7 @@ class Hysteresis(Measurement):
 
 
     def paramag_slope_correction(self, percentage_of_field=80.):
+        print 'test'
         p = percentage_of_field / 100
         df_start = np.array([i for i in self.down_field if i[0] >= max(self.down_field[:, 0]) * p])  # 1
         df_end = np.array([i for i in self.down_field if i[0] <= min(self.down_field[:, 0]) * p])  # 2
@@ -784,10 +964,36 @@ class Hysteresis(Measurement):
         self.paramag_sus = slope
         self.paramag_corrected = True
 
+
+    def limit_fields(self, field_limit):
+        self.down_field = np.array([i for i in self.down_field if -field_limit < i[0] < field_limit])
+        self.up_field = np.array([i for i in self.up_field if -field_limit < i[0] < field_limit])
+        try:
+            self.virgin = np.array([i for i in self.virgin if -field_limit < i[0] < field_limit])
+        except TypeError:
+            self.log.debug('CAN\'T limit virgin branch')
+
+        try:
+            self.msi = np.array([i for i in self.msi if -field_limit < i[0] < field_limit])
+        except TypeError:
+            self.log.debug('CAN\'T limit msi branch')
+
+        try:
+            self.df_interp = np.array([i for i in self.df_interp if -field_limit < i[0] < field_limit])
+            self.uf_interp = np.array([i for i in self.uf_interp if -field_limit < i[0] < field_limit])
+            self.df_interp = np.array([i for i in self.df_interp if -field_limit < i[0] < field_limit])
+            self.up_field_interpolated = np.array(
+                [i for i in self.up_field_interpolated if -field_limit < i[0] < field_limit])
+        except AttributeError:
+            print self.log.error('CAN\'T limit interpolation')
+
+    ''' PLOTS '''
+
     def plot_Fabian2003(self, norm='mass', out='show', folder=None, name=None):
         RPplt.Hys_Fabian2003(self.sample_obj, norm=norm, log=None, value=None, plot=out, measurement=self).show(out=out,
                                                                                                                 folder=folder
         )
+
 
     def plot(self, norm='mass', out='show', virgin=False, folder=None, name='output.pdf', figure=None):
         factor = {'mass': self.sample_obj.mass(),
@@ -906,7 +1112,8 @@ class Viscosity(Measurement):
             if folder is not None:
                 plt.savefig(folder + self.sample_obj.name + '_' + name, dpi=300)
 
-#data #todo find Thellier data structure
+
+# data #todo find Thellier data structure
 class Thellier(Measurement):
     '''
 
@@ -927,13 +1134,12 @@ class Thellier(Measurement):
 
         if mfile:
             self.holder = self.raw_data['acryl']
-
-            self.nrm = helper.get_type(self.raw_data, 'NRM')
             self.trm = helper.get_type(self.raw_data, 'TRM')
+            self.nrm = helper.get_type(self.raw_data, 'NRM')
 
             # get_type gives - T, x, y, z, m
             self.th = helper.get_type(self.raw_data, 'TH')
-            test = data.data(self.th[:,0], self.th[:,1], self.th[:,5])
+            test = data.data(self.th[:, 0], self.th[:, 1], self.th[:, 5])
 
             ''' STDEVS for TH, PTRM, SUM '''
             # initializing #todo reaad stdev from file
@@ -973,6 +1179,41 @@ class Thellier(Measurement):
             self.difference = self.calculate_difference()
 
         self.lab_field = lab_field
+
+    @property
+    def trm_data(self):
+        out = data.data(self.trm[:, 0], self.trm[:, 1:4], self.trm[:, -1])
+        return out
+
+    @property
+    def nrm_data(self):
+        out = data.data(self.nrm[:, 0], self.nrm[:, 1:4], self.nrm[:, -1])
+        return out
+
+    @property
+    def th_data(self):
+        out = data.data(self.th[:, 0], self.th[:, 1:4], self.th[:, -1])
+        return out
+
+    @property
+    def pt_data(self):
+        out = data.data(self.pt[:, 0], self.pt[:, 1:4], self.pt[:, -1])
+        return out
+
+    @property
+    def ptrm_data(self):
+        out = self.pt_data - self.th_data
+        return out
+
+    @property
+    def sum_data(self):
+        out = self.pt_data + self.th_data
+        return out
+
+    @property
+    def difference_data(self):
+        out = self.ptrm_data + self.th_data
+        return out
 
     def get_data(self, step, dtype):
         if step not in self.__dict__.keys():
@@ -1241,6 +1482,12 @@ class Thellier(Measurement):
         MAD = statistics.MAD(x, y, z)
         return MAD
 
+    def calculate_slope_data(self, t_min=20, t_max=700, **options):
+        self.log.info('NEW CALCULATING\t sloep fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
+
+        print self.ptrm_data.m
+        print self.th_data.m
+
     def calculate_slope(self, t_min=20, t_max=700, **options):
         self.log.info('CALCULATING\t arai line fit << t_min=%.1f , t_max=%.1f >>' % (t_min, t_max))
 
@@ -1308,7 +1555,8 @@ class Thellier(Measurement):
     def x_dash(self, t_min=20, t_max=700, **options):
         # todo comments
         '''
-        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are used to
+        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are
+        used to
         calculate the NRM fraction and the length of the best-ﬁt line among other parameters. There are
         multiple ways of calculating :math:`x_0 and :math:`y_0`, below is one example.
 
@@ -1334,7 +1582,8 @@ class Thellier(Measurement):
     def y_dash(self, t_min=20, t_max=700, **options):
         # todo comments
         '''
-        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are used to
+        :math:`x_0 and :math:`y_0` the x and y points on the Arai plot projected on to the best-ﬁt line. These are
+        used to
         calculate the NRM fraction and the length of the best-ﬁt line among other parameters. There are
         multiple ways of calculating :math:`x_0 and :math:`y_0`, below is one example.
 
@@ -1376,7 +1625,8 @@ class Thellier(Measurement):
     def scatter(self, t_min=20, t_max=700, **options):
         # todo change to new xyzm version
         '''
-        The “scatter” parameter :math:´beta´: the standard error of the slope σ (assuming uncertainty in both the pTRM and NRM
+        The “scatter” parameter :math:´beta´: the standard error of the slope σ (assuming uncertainty in both the
+        pTRM and NRM
         data) over the absolute value of the best-fit slope |b| (Coe et al. 1978).
 
         :param quantity:
@@ -1446,7 +1696,8 @@ class Thellier(Measurement):
 
     def FRAC(self, t_min=20, t_max=700, **options):
         '''
-        NRM fraction used for the best-fit on an Arai diagram determined entirely by vector difference sum calculation (Shaar and Tauxe, 2013).
+        NRM fraction used for the best-fit on an Arai diagram determined entirely by vector difference sum
+        calculation (Shaar and Tauxe, 2013).
         '''
         NRM_sum = np.sum(np.fabs(self.VD(t_min=t_min, t_max=t_max)))
         out = NRM_sum / self.VDS(t_min=t_min, t_max=t_max)
@@ -1605,11 +1856,13 @@ class Thellier(Measurement):
         data = [-slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
                 x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx]]
 
-        out = '%.2f\t %.2f\t %.2f\t %.2f\t %.3e\t %.3e\t %.2f\t %.2f\t %.3e\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f' % (
-            -slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
-            x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx])
+        out = '%.2f\t %.2f\t %.2f\t %.2f\t %.3e\t %.3e\t %.2f\t %.2f\t %.3e\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t ' \
+              '%.2f' % (
+                  -slopes[idx] * lab_field, sigmas[idx] * lab_field, slopes[idx], sigmas[idx], y_intercept[idx],
+                  x_intercept[idx], f[idx], f_VDS[idx], VDS, FRAC, beta[idx], g[idx], q[idx], gap_max, w[idx])
 
-        if header: print out_header
+        if header:
+            print out_header
         if csv_hdr:
             return csv_header
         if csv:
@@ -1726,7 +1979,6 @@ class Thellier(Measurement):
                  xx, fp(p, xx), 'r',
         )
         plt.show()
-
 
     def export_tdt(self, folder=None, name='_output'):
 
@@ -1981,3 +2233,451 @@ class Pseudo_Thellier(Measurement):
         return slopes, sigmas, y_intercept, x_intercept
 
 
+class Thermo_Curve(Measurement):
+    def __init__(self, sample_obj,
+                 af_obj, parm_obj,
+                 mtype=None, mfile=None, machine=None,
+                 **options):
+        log = 'RockPy.MEASUREMENT.thermo_curve'
+        super(Thermo_Curve, self).__init__(sample_obj, mtype, mfile, machine, log=log, **options)
+
+        self.dt = self.down_temp()
+        self.ut = self.up_temp()
+
+    def differentiate(self, mdir='dt', strength=2):
+
+        data = getattr(self, mdir)
+        aux = [
+            (data[i - strength, 1:] - data[i + strength, 1:]) / (
+                data[i - strength, 0] - data[i + strength, 0])
+            for i in range(strength, len(data[:, 0]) - strength)]
+        # aux = np.c_[data[:,0], aux]
+        print aux
+
+    def up_temp(self):
+        diff = np.diff(self.raw_data['temp'])
+        for i in range(len(diff)):
+            if diff[i] < 0:
+                idx = i
+                break
+
+        t = self.raw_data['temp'][:idx + 1]
+        m = self.raw_data['moment'][:idx + 1]
+        b = self.raw_data['field'][:idx + 1]
+        time = self.raw_data['time'][:idx + 1]
+        out = np.c_[t, m, b, time]
+
+        return out
+
+    def down_temp(self):
+        diff = np.diff(self.raw_data['temp'])
+        for i in range(len(diff)):
+            if diff[i] < 0:
+                idx = i
+                break
+
+        t = self.raw_data['temp'][idx:]
+        m = self.raw_data['moment'][idx:]
+        b = self.raw_data['field'][idx:]
+        time = self.raw_data['time'][idx:]
+        out = np.c_[t, m, b, time]
+
+        return out
+
+
+class Forc(Measurement):
+    def __fitPolySurface(self, data):
+        x, y, z = data
+        v = np.array([np.ones(len(x)), x, y, x ** 2, y ** 2, x * y])
+        mean_x = np.mean(x)
+        mean_y = np.mean(y)
+        coefficients, residues, rank, singval = np.linalg.lstsq(v.T, z)
+        return mean_x, mean_y, -0.5 * coefficients[5], residues[0]
+
+    @property
+    def return_fitting_surface(self):  #todo get working
+        '''
+        function generates a list (fitdata) of lists, where each of the lists contains the value of Ha, Hb and the values of the sub-surface
+        :return:
+        '''
+
+        x_grid, y_grid = np.meshgrid(self.xi, self.yi)
+        fitdata = [[
+                       np.array(y_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),
+                       # Ha
+                       np.array(x_grid[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten(),
+                       # Hb
+                       np.array(self.zi[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1]).flatten()]
+                   # values
+                   for Hac in xrange(self.SF, self.len_ha - self.SF)
+                   for Hbc in xrange(self.SF, self.len_hb - self.SF)]
+
+        # # if self.zi[Hac - self.SF:Hac + self.SF + 1, Hbc - self.SF:Hbc + self.SF + 1].shape == (2 * self.SF + 1, 2 * self.SF + 1)]
+        #
+        # fitdata = [i for i in fitdata if np.count_nonzero(np.isnan(i[2])) < 0.5 * len(i[2].flatten())]
+        fitdata = [i for i in fitdata if np.count_nonzero(np.isnan(i[2])) < 0.01 * len(i[2].flatten())]
+        return np.array(fitdata)
+
+
+    def __init__(self, sample_obj, mtype, mfile, machine, **options):
+        log = 'RockPy.MEASUREMENT.forc'
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
+
+        self.fitted_forc_data = None
+        self.SF = 3
+
+        self.__dict__.update(self.raw_data['SCRIPT'])
+
+        self.field = self.raw_data.get('Field (T)', None)
+        self.moment = self.raw_data.get('Moment (Am\xb2)', None)
+
+        self.temperature = self.raw_data.get('Temperature (K)', None)
+
+        if self.temperature is None:
+            self.temperature = [np.ones(len(i)) * 295 for i in
+                                self.moment]  #generates temp = 295C data if temp data not in data file
+
+        nforc = int(self.raw_data['SCRIPT']['NForc'])
+        start = len(self.field) - 2 * nforc
+
+        self.log.debug('GENERATING << drift >> data')
+        self.drift = np.array(
+            [np.c_[[float(self.field[i]), float(self.moment[i]), float(self.temperature[i])]] for i in
+             range(start, len(self.moment)) if
+             (i + (start % 2)) % 2 == 0])
+        self.drift = self.drift.reshape((self.drift.shape[0], self.drift.shape[1]))
+        self.drift_std = np.std(self.drift, axis=0)
+
+        self.log.debug('GENERATING << individual forc >> data')
+        self.forcs = np.array(
+            [np.array([self.field[i], self.moment[i]]) for i in range(start, len(self.moment))  #todo temperature
+             if (i + (start % 2)) % 2 != 0])
+
+        self.len_ha = len(self.forcs)
+        self.len_hb = max([len(i) for i in self.moment])
+
+        self.log.debug('GENERATING << field_spacing >> data')
+        self.field_spacing_aux = np.array(
+            [np.diff(self.field[i]) for i in range(start, len(self.moment)) if (i + (start % 2)) % 2 != 0][
+            1:]).flatten()
+
+        self.field_spacing = np.array([j for i in self.field_spacing_aux for j in i[1:-1]])
+
+        self.field_spacing_first = np.array([i[0] for i in self.field_spacing_aux])
+        self.field_spacing_last = np.array([i[-1] for i in self.field_spacing_aux])
+        self.field_spacing_std = np.std(self.field_spacing)
+
+        forc_data = []
+        hysteresis_df = []
+        hysteresis_uf = []
+
+        self.log.debug('GENERATING << forc, mirrored forc >> data')
+
+        for i in self.forcs:
+            ha = i[0][0]
+            mha = i[1][0]
+            hysteresis_df.append(np.array([ha, mha]))
+            for j in range(len(i[0])):
+                hb = i[0][j]
+                mhb = i[1][j]
+                # t = i[2][j]
+
+                aux = np.array([ha, hb, mhb])
+                forc_data.append(aux)
+                if not j == 0:
+                    mirror = np.array([aux[0], 2 * aux[0] - aux[1], 2 * mha - mhb])  #todo incorp temperature
+                    forc_data.append(mirror)
+
+        self.forc_data = np.array(forc_data)
+        self.hysteresis_df = np.array(hysteresis_df)
+        self.hysteresis_uf = self.forcs[-1]
+
+        #todo calculate backfield from data and add coe measurement
+        self.backfield = self.calculate_backfield()
+        #todo calculate hysteresis from data
+        # print self.forcs[-1]
+        # self.backfield = np.array(backfield)
+
+        y = self.forc_data[:, 0]  # Ha
+        x = self.forc_data[:, 1]  # Hb
+        z = self.forc_data[:, 2]
+
+        self.xi = np.linspace(self.min_Hb, self.max_Hb, self.len_hb)
+        self.yi = np.linspace(self.min_Ha, self.max_Ha, self.len_ha)
+        self.zi = griddata(x, y, z, self.xi, self.yi, interp='linear')  # grid the data
+
+    def calculate_backfield(self):
+        '''
+        calculates backfield component from forc data. Returns data with [ha, m(B=0), sm(from regression)]
+        M(B=0) is calculated using a linear regression around 0 (+- 3 data points) for each forc branch.
+        :return: ndarray
+        '''
+        self.log.info('CALCULATING << backfield >> from forc')
+
+        aux = []
+        n= 0
+        for i in self.forcs:
+            n += 1
+            idx = np.argmin(np.fabs(i[0]))
+            ha = min(i[0])
+            if ha < 0:
+                x = i[0][idx - 3:idx + 3]
+                y = i[1][idx - 3:idx + 3]
+                if len(x) >0:
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+                    mx = x.mean()
+                    # my = y.mean()
+                    sx2 = sum(((x - mx) ** 2))
+                    i = np.sqrt(1./ sx2)
+
+                    # sxy = sum((x-mx)*(y-my))
+                    # slope = sxy / sx2
+                    # intercept = my - slope * mx
+                    # y_new = x * slope + intercept
+                    # sse = sum((y-y_new)**2)
+                    # std_err = sse / (len(x)-2)
+                    sd_intercept = (std_err/i) * np.sqrt(1. / len(x) + mx ** 2 * mx / sx2)
+                    aux.append(np.array([ha, intercept, 2*sd_intercept]))
+        out = np.array(aux)
+        return out
+
+    def calculate_forc(self, SF=3, **options):
+        self.log.info('CACULATING forc data with smoothing factor << %i >>' % SF)
+        self.SF = SF
+
+        #todo multiprocessing
+        # pool = multiprocessing.Pool(processes=6)
+        # self.fitted_forc_data = np.array(pool.map(self.__fitPolySurface, self.return_fitting_surface))
+        # pool.close()
+        self.fitted_forc_data = np.array(map(self.__fitPolySurface, self.return_fitting_surface))
+
+    def plt_backfield(self):
+        # print self.backfield
+        plt.axhline(color='#808080')
+        plt.axvline(color='#808080')
+        plt.plot(self.backfield[:, 0], self.backfield[:, 1], '.-')
+        plt.xlim([min(self.backfield[:, 0]), max(self.backfield[:, 0])])
+        plt.title('Backfield: %s' %self.sample_obj.name)
+        plt.xlabel('Field [T]')
+        plt.ylabel('Moment')
+        plt.show()
+
+
+    @property
+    def TranslateHaHbHcHu(self):
+        ''' translate from Ha,Hb coordinates into common Hu,Hc coordinats'''
+        self.log.debug('Translating << Ha/Hb >> into << Hu/Hc >> space')
+        # Hu = (Ha+Hb) / 2
+        # Hc = (Hb-Ha) / 2
+        HcHudata = None
+
+        if self.fitted_forc_data is None:
+            self.log.error('FITTED forc data has not been calculated, yet')
+            return
+
+        for fl in self.fitted_forc_data:
+            Hu = (fl[0] + fl[1]) / 2
+            Hc = (fl[1] - fl[0]) / 2
+
+            newfl = (Hc, Hu, fl[2], fl[3])
+
+            if HcHudata == None:
+                HcHudata = np.reshape(newfl, (1, len(newfl)))  # reshape needed to form 2D array
+            else:
+                HcHudata = np.vstack(( HcHudata, newfl))  # append line to array
+
+        return HcHudata
+
+
+    @property
+    def min_Ha(self):
+        return min(self.forc_data[:, 0])
+
+    @property
+    def min_Hb(self):
+        return min(self.forc_data[:, 1])
+
+    @property
+    def max_Ha(self):
+        return max(self.forc_data[:, 0])
+
+    @property
+    def max_Hb(self):
+        return max(self.forc_data[:, 1])
+
+    def plt_forcs(self, n=5):
+
+        for i in range(0, len(self.forcs), n):
+            plt.plot(self.forcs[i][0], self.forcs[i][1]
+            )
+        MX = max([max(i[0]) for i in self.forcs])
+        MXy = max([max(i[1]) for i in self.forcs])
+        plt.xlim(-MX, MX)
+        plt.ylim(-MXy, MXy)
+        plt.show()
+
+    def plt_ha_hb_space(self):
+
+        plt.contourf(self.xi, self.yi, self.zi, 30, cmap=plt.cm.get_cmap("jet"))
+
+        #plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='jet')
+        plt.colorbar()  # draw colorbar
+        plt.xlabel('Hb')
+        plt.ylabel('Ha')
+        plt.title('FORC raw data (magnetic moments)')
+        plt.axis('equal')
+        plt.show()
+
+    def plt_forc_field_spacing(self):
+        """
+        plots the saturating field and standard deviation
+
+        """
+        plt.title('Statistical distribution of Field Steps')
+        plt.hist(self.field_spacing_first, 50, normed=0, facecolor='red', alpha=0.5, log=True, label='first')
+        n, bins, patches = plt.hist(self.field_spacing, 50, normed=0, facecolor='green', alpha=0.5, log=True,
+                                    label='other')
+        plt.hist(self.field_spacing_last, 50, normed=0, facecolor='blue', alpha=0.5, log=True, label='last')
+        plt.xlabel('Step size [T]')
+        plt.ylabel('Number of steps')
+        plt.legend()
+        plt.show()
+
+
+    def plt_drift_field_sat(self):
+        """
+        plots the saturating field and standard deviation
+
+        """
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0], '.')
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0], '-', color='r', alpha=0.4)
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] - self.drift_std[0], '-', color='r', alpha=0.4)
+        plt.fill_between(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0],
+                         self.drift[:, 0] - self.drift_std[0],
+                         color='r', alpha=0.2)
+        plt.show()
+
+    def plt_drift_moment_sat(self):
+        """
+        plots the saturation moment and standard deviation
+
+        """
+        data = self.drift[:, 1] / max(self.drift[:, 1])
+        plt.plot(range(len(data)), data, '.')
+        plt.plot(range(len(data)), data + self.drift_std[1] / max(self.drift[:, 1]), '-', color='r', alpha=0.4)
+        plt.plot(range(len(data)), data - self.drift_std[1] / max(self.drift[:, 1]), '-', color='r', alpha=0.4)
+        plt.fill_between(range(len(data)), data + self.drift_std[1] / max(self.drift[:, 1]),
+                         data - self.drift_std[1] / max(self.drift[:, 1]),
+                         color='r', alpha=0.2)
+        plt.xlim(0, len(data))
+        plt.xlabel('calibration measurement number')
+        plt.ylabel('moment calibration value')
+        plt.show()
+
+    def plt_forc(self, SF=3):
+
+        if self.fitted_forc_data is None:
+            self.log.warning('NO fitted data found, fitting data with smoothing factor << 3 >>')
+            self.calculate_forc(SF=SF)
+
+        # plot FORC diagram in Ha, Hb
+        # x, y, z = self.fitted_forc_data[:, 1], self.fitted_forc_data[:, 0], self.fitted_forc_data[:, 2]
+        #
+        # # define grid
+        # xi = np.linspace(min(x),max(x), self.len_hb)
+        # yi = np.linspace(min(y),max(y), self.len_ha)
+        #
+        # # grid the data
+        # zi = griddata(x, y, z, xi, yi, interp='linear')
+        #
+        # plt.figure(2)
+        # # contour the gridded data
+        # plt.contourf(xi, yi, zi, 20, cmap=plt.cm.get_cmap("jet"))
+        # #plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='RdBu')
+        # plt.colorbar()  # draw colorbar
+        # plt.xlabel('Hb')
+        # plt.ylabel('Ha')
+        # plt.title('FORC processed (SF=%d)' % self.SF)
+        # plt.axis('equal')
+        from matplotlib.colors import Normalize
+
+        class MidpointNormalize(Normalize):
+            def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+                self.midpoint = midpoint
+                Normalize.__init__(self, vmin, vmax, clip)
+
+            def __call__(self, value, clip=None):
+                # I'm ignoring masked values and all kinds of edge cases to make a
+                # simple example...
+                x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+                return np.ma.masked_array(np.interp(value, x, y))
+
+        xyz = self.TranslateHaHbHcHu
+        x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+        # define grid
+
+        xi = np.linspace(0, max(x), self.len_ha * 2)  # Hc space
+        yi = np.linspace(min(y), max(y), self.len_hb * 2)  # Hu space
+        # grid the data
+        zi = griddata(x, y, z, xi, yi, interp='linear')
+
+        plt.figure(3)
+        # contour the gridded data
+        norm = MidpointNormalize(midpoint=0)
+        plt.contourf(xi, yi, zi, 50,
+                     norm=norm,
+                     # cmap=plt.cm.get_cmap("RdBu_r"),
+                     cmap=plt.cm.seismic
+        )
+
+        # plt.axhline(0, color='black')
+        plt.colorbar()  # draw colorbar
+        # plot data points.
+        plt.xlabel('Hc')
+        plt.ylabel('Hu')
+        # show data points
+        #plt.scatter( x, y)
+        plt.title('FORC processed (SF=%d)' % self.SF)
+        #plt.axis('equal')
+        plt.axis('scaled')
+
+        plt.xlim([sorted(xi)[50], xi.max()])
+        plt.ylim([sorted(yi)[50], yi.max()])
+        #plt.savefig( fname + '.png')
+
+        plt.show()
+
+    def plt_residuals(self):
+        xyz = self.TranslateHaHbHcHu
+        x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 3]
+        # define grid
+
+        xi = np.linspace(0, max(x), self.len_ha * 2)  # Hc space
+        yi = np.linspace(min(y), max(y), self.len_hb * 2)  # Hu space
+        # grid the data
+        zi = griddata(x, y, z, xi, yi, interp='linear')
+
+        plt.figure(3)
+        # contour the gridded data
+        plt.contourf(xi, yi, zi, 50, cmap=plt.cm.get_cmap("jet"))
+        plt.axhline(0, color='black')
+        plt.colorbar()  # draw colorbar
+        # plot data points.
+        plt.xlabel('Hc')
+        plt.ylabel('Hu')
+        # show data points
+        #plt.scatter( x, y)
+        plt.title('FORC processed (SF=%d)' % self.SF)
+        #plt.axis('equal')
+
+        plt.xlim([0, 0.1])
+        plt.ylim([-0.1, 0.03])
+        #plt.savefig( fname + '.png')
+
+        plt.show()
+
+    def plt_hysteresis(self):
+        plt.plot(self.hysteresis_df[:, 0], self.hysteresis_df[:, 1])
+        plt.plot(self.hysteresis_uf[0], self.hysteresis_uf[1])
+        plt.show()

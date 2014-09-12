@@ -6,7 +6,7 @@ from matplotlib import rc, lines
 This module is used for calling plotting functions
 '''
 
-def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
+def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf', plt_opt={}, **options):
     '''
     Main plotting of a hysteresis.
     :param hys_obj: hysteresis object
@@ -24,16 +24,18 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
        name of the pdf
     '''
 
+    paramag_text = options.get('paramag_text', True)
+
     ax.axhline(0, color='#555555') # 0 line horizontally
     ax.axvline(0, color='#555555') # 0 line vertically
 
-    std, = ax.plot(hys_obj.up_field[:, 0], hys_obj.up_field[:, 1] / norm_factor,
-                   # color='k',
-                   )
-    ax.plot(hys_obj.down_field[:, 0], hys_obj.down_field[:, 1] / norm_factor,
-            color=std.get_color())
+    std, = ax.plot(hys_obj.up_field[:, 0], hys_obj.up_field[:, 1] / norm_factor, **plt_opt
+                       )
 
-    if hys_obj.paramag_corrected:
+    ax.plot(hys_obj.down_field[:, 0], hys_obj.down_field[:, 1] / norm_factor,
+            color=std.get_color(), **plt_opt)
+
+    if hys_obj.paramag_corrected and paramag_text:
         ax.text(1, 1, 'paramagnetic corrected: $\\chi_{p}=%.2e$' % hys_obj.paramag_sus,
                 horizontalalignment='right',
                 verticalalignment='bottom',
@@ -48,7 +50,7 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
         return ax
     if out == 'save':
         if folder is not None:
-            plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
+            plt.savefig(folder + hys_obj.samples[0].name + '_' + name, dpi=300)
 
 def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''

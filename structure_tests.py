@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 __author__ = 'mike'
-from Structure import sample
+from Structure.sample import Sample
 from Functions import general
 import matplotlib.pyplot as plt
 import matplotlib
@@ -42,6 +43,22 @@ def hys_test():
     plt.xlim([0,6000])
     plt.show()
 
+def initial_state_test():
+
+    p11_nrm = '/Users/mike/Google Drive/__PHD/__Projects/001 Influence of Pressure on Paleointensities/04 data/LF6C/MUCSUSH-LF6C_P11_TRM(50µT)_xxx_NRM-2704.NRM'
+    p11_af = '/Users/mike/Google Drive/__PHD/__Projects/001 Influence of Pressure on Paleointensities/04 data/LF6C/MUCSUSH-LF6C_P11_TRM(50µT)_xxx_AF-2706.AF'
+
+    c14 = Sample(name='14c')
+
+    sample = c14
+
+    af = sample.add_measurement(mtype='af-demag', mfile=p11_af, machine='sushibar')
+    af.add_treatment(ttype='pressure', options={'p_max': 0.3, 'p_seen': 0.3})
+    af.add_initial_state(mtype='trm', machine='sushibar', mfile=p11_nrm)
+    print af.initial_state
+    # test = af.normalize(dtype='data', norm='initial_state')
+    # print test.m#,af.data.m, af.initial_state.m, af.data.m / af.initial_state.m
 
 if __name__ == '__main__':
-    hys_test()
+    # hys_test()
+    initial_state_test()

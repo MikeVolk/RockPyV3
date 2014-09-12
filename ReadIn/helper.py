@@ -66,6 +66,22 @@ def get_type(d_dict, type, **options):
     out = check_duplicates(out)
     return out
 
+def get_type_data(d_dict, type, **options):
+    log = logging.getLogger('RockPy.READIN.get_type')
+    if type in d_dict['type']:
+        log.debug('FOUND:\t measurement steps << %s >>' % type)
+    else:
+        log.error('CANT FIND\t << %s >> in dict' % type)
+        log.error('RETURNING:\t None')
+        return None
+
+    type_indx = np.where(d_dict['type'] == type)[0]
+    out = np.array([[d_dict['step'][i],
+                     d_dict['x'][i], d_dict['y'][i], d_dict['z'][i], d_dict['m'][i], time.mktime(d_dict['time'][i])]
+                    for i in list(type_indx)])
+
+    out = check_duplicates(out)
+    return out
 
 def claculate_difference(T_xyzm_list1, T_xyzm_list2):
     # print T_xyzm_list1[0]

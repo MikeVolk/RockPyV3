@@ -5,7 +5,7 @@ from RockPyV3.Functions import general
 
 
 class Treatment(object):
-    general.create_logger('RockPy.TREATMENT')
+    # general.create_logger('RockPy.TREATMENT')
 
     def __init__(self, sample, measurement, ttype, log=None):
         if not log:
@@ -16,7 +16,7 @@ class Treatment(object):
 
 
 class Pressure(Treatment):
-    general.create_logger('RockPy.TREATMENT.pressure')
+    # general.create_logger('RockPy.TREATMENT.pressure')
 
     def __init__(self, sample, measurement, options):
         self.log = logging.getLogger('RockPy.TREATMENT.pressure')
@@ -24,8 +24,13 @@ class Pressure(Treatment):
         self.log.info('CREATING\t new treatment << %s >> for sample << %s >> | measurement << %s >>' % (
             'pressure', self.sample.name, self.measurement.mtype))
         self.log.info('CREATING\t                                                    with options: %s' % options)
+
         p_max = options.get('p_max', 0)
         p_seen = options.get('p_seen', 0)
+        if p_seen < p_max:
+            p_seen = p_max
+            self.log.warning('P_SEEN < P_MAX --> impossible --> setting << P_SEEN = P_MAX >>')
+
         self.p_unit = options.get('p_unit', 'GPa')
         self.p_max = p_max
         self.p_seen = p_seen
