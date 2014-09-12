@@ -616,6 +616,7 @@ class Henkel_Plot(Plot):
             irm = sample.find_measurement('irm')[0]
 
             ms = (coe.ms + irm.ms)/2
+
             backfield.plot_henkel(coe_obj=coe, irm_obj=irm, ax=self.ax, norm_factor=[ms, ms])
 
             if len(self.sample_list) == 1:

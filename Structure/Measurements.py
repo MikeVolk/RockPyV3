@@ -138,8 +138,21 @@ class Measurement(object):
             self.log.error('UNKNOWN\t treatment type << %s >> is not know or not implemented' % ttype)
 
 
-    def interpolate(self, what, x_new=None):
-        self.log.info('INTERPOLATIN << %s >> using interp1d (Scipy)' % what)
+    def interpolate(self, what, x_new=None, derivative=0):
+        """
+        from scipy.interpolate.splev(x, tck, der=0, ext=0):
+           Evaluate a B-spline or its derivatives.
+
+           Given the knots and coefficients of a B-spline representation, evaluate the value of the smoothing polynomial
+           and its derivatives. This is a wrapper around the FORTRAN routines splev and splder of FITPACK.
+
+        :param what:
+        :param x_new:
+        :param derivative : int
+                          The order of derivative of the spline to compute (must be less than or equal to k).
+        :return:
+        """
+        self.log.info('INTERPOLATIN << %s >> using splev (Scipy)' % what)
         xy = np.sort(getattr(self, what), axis=0)
         mtype = getattr(self, 'mtype')
 
@@ -153,27 +166,38 @@ class Measurement(object):
             x_new = np.linspace(min(x), max(x), 5000)
 
         fc = splrep(x, y, s=0)
-        y_new = interpolate.splev(x_new, fc, der=0)
+        y_new = interpolate.splev(x_new, fc, der=derivative)
 
         out = np.array([[x_new[i], y_new[i]] for i in range(len(x_new))])
 
         if mtype == 'coe':
             out = np.array([[-i[0], i[1]] for i in out])
         self.log.debug('INTERPOLATION READY')
+        if derivative > 0:
+            self.log.info('RETURNING derivative << %i >>' % derivative)
         return out
 
     def calculate_derivative(self, what, interpolate_first = False, **options):
+        """
+        Calculates the derivative of a certain attribute of the class
 
+        :param what : str
+                    attribute name
+        :param interpolate_first : bool
+                                 wether the data is to be interpolated and the derivative of this is returned
+        :param options : dict
+                       options
+        :return: ndarray
+        """
         diff = options.get('diff', 1)
         smoothing = options.get('smoothing', 1)
         norm = options.get('norm', True)
 
         if interpolate_first:
-            data = self.interpolate(what=what)
+            out = self.interpolate(what=what, derivative=diff)
         else:
             data = getattr(self, what, None)
-
-        out = Functions.general.differentiate(data, diff=diff, smoothing=smoothing, norm=norm)
+            out = Functions.general.differentiate(data, diff=diff, smoothing=smoothing, norm=norm)
         return out
 
     def normalize(self, dtype, norm, value=1, **options):
@@ -421,6 +445,7 @@ class Irm(Measurement):
         Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         self.fields = self.raw_data[1][0][:, 0]
+        self.log10_fields = np.log10(self.fields)
         self.rem = self.raw_data[1][0][:, 1]
         self.dmom = self.raw_data[1][0][:, 2]
 
@@ -430,6 +455,11 @@ class Irm(Measurement):
     @property
     def data(self):
         out = np.c_[self.fields, self.rem]
+        return out
+
+    @property
+    def log10_data(self):
+        out = np.c_[self.log10_fields, self.rem]
         return out
 
     @property
@@ -444,29 +474,58 @@ class Irm(Measurement):
         plt.ylabel('Moment')
         plt.show()
 
-    def plt_irm_derivative(self, **options):
+    def plt_irm_unmixing(self, **options):
+        '''
+        Simple plotting function for IRM unmixing
+
+        Robertson & France (1994) showed that the individual magnetic mineral phases contributing to a
+        bulk IRM curve would each have an acquisition path approximating to a lognormal function, described
+        using three parameters:
+
+        B1/2: the applied field at which the mineral phase would acquire half of its saturation IRM (SIRM),
+              providing a measure of the mean coercivity of that population.
+        Mri:  the magnitude of the phase distribution, providing an indication of the component SIRM and therefore
+              its contribution to the bulk IRM curve.
+        DP:   the dispersion parameter, expressing the coercivity distribution of a mineral phase and corresponding
+              to one standard deviation of the lognormal function.
+        '''
+
+        # ## checking for options ###
         norm = options.get('norm', False)
+        interpolate_first = options.get('interpolate_first', True)
 
-        diff_data = self.calculate_derivative(what='data', interpolate_first = True, **options)
-        diff_data2 = self.calculate_derivative(what='data', interpolate_first = False, **options)
+        diff_data = self.calculate_derivative(what='log10_data', interpolate_first=interpolate_first,
+                                              **options)
 
-        interp = self.interpolate('data')
+        interp = self.interpolate('log10_data')
 
-        plt.title('IRM acquisition of %s' %self.sample_obj.name)
+        plt.title('IRM acquisition of %s' % self.sample_obj.name)
 
         if norm:
             norm_factor = self.rem.max()
         else:
             norm_factor = 1
 
-        plt.plot(self.fields, self.rem/norm_factor)
-        plt.plot(interp[:,0], interp[:,1]/norm_factor)
+        std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',
+                        label='data',
+        )
+        plt.plot(interp[:, 0], interp[:, 1] / norm_factor, '--',
+                 color=std.get_color(),
+                 label='interpolated',)
 
-        plt.plot(diff_data[:,0], diff_data[:,1])
-        plt.plot(diff_data2[:,0], diff_data2[:,1])
-        plt.xlabel('Field [T]')
+        diff_label = '1st derivative'
+        if interpolate_first:
+            diff_label += ' interpolated'
+        plt.plot(diff_data[:, 0], diff_data[:, 1],
+                 label=diff_label)
+
+        plt.xlabel('$\\log_{10}$(Field) [T]')
         plt.ylabel('Moment')
-        plt.ylim([0, max(self.rem/norm_factor)])
+
+        if norm:
+            plt.ylim([0, max(self.rem / norm_factor)])
+
+        plt.legend(loc='best')
         plt.show()
 
 #data #todo find Hysteresis data structure
