@@ -4,9 +4,7 @@
     <option name="ANALYSIS_IN_BACKGROUND" value="true" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e37426bd-71ce-4d69-a24b-13832d3a73b7" name="Default" comment="measurement.interpolate now allows return of derivative&#10;measurement.calculate derivative can now return derivative from interpolated data">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-    </list>
+    <list default="true" id="e37426bd-71ce-4d69-a24b-13832d3a73b7" name="Default" comment="measurement.interpolate now allows return of derivative&#10;measurement.calculate derivative can now return derivative from interpolated data" />
     <list id="ceb68396-0786-4fa5-8b76-ee5db19ef7ab" name="Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
     <list id="1cf93eae-3449-4d65-a663-b8e06095295a" name="Failed commit: Failed commit: Default" comment="Added lots of new hysteresis features, includin plots&#10;" />
     <list id="944f74eb-3b89-44a5-be4a-32312dbcf2cb" name="Failed commit: Failed commit: Default (2)" comment="Added lots of new hysteresis features, includin plots&#10;" />
@@ -744,7 +742,11 @@
       <created>1410524311073</created>
       <updated>1410524311073</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="measurement.interpolate now allows return of derivative&#10;measurement.calculate derivative can now return derivative from interpolated data">
+      <created>1410537090455</created>
+      <updated>1410537090455</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="TodoView" selected-index="0">
@@ -772,8 +774,8 @@
     <editor active="false" />
     <layout>
       <window_info id="Documentation" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.28762007" sideWeight="0.49920762" order="4" side_tool="false" content_ui="tabs" x="104" y="122" width="1716" height="858" />
-      <window_info id="Changes" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24893618" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24893618" sideWeight="0.5" order="9" side_tool="true" content_ui="tabs" />
+      <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24893618" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24893618" sideWeight="0.5" order="9" side_tool="true" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32998565" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.828175" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="10" side_tool="true" content_ui="tabs" />
