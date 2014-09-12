@@ -13,8 +13,7 @@ import backfield, hysteresis, af_demagnetization
 
 
 class Plot(object):
-
-    def __init__(self, samples_list, norm=None, log=None,
+    def __init__(self, sample_list, norm=None, log=None,
                  plot='show', folder=None, name='output.pdf',
                  plt_opt={},
                  **options):
@@ -28,14 +27,14 @@ class Plot(object):
         params = {'backend': 'ps',
                   'text.latex.preamble': [r"\usepackage{upgreek}",
                                           r"\usepackage[nice]{units}"],
-                  'axes.labelsize': 16,
-                  'text.fontsize': 16,
+                  'axes.labelsize': 12,
+                  'text.fontsize': 12,
                   'legend.fontsize': 8,
                   'xtick.labelsize': 10,
                   'ytick.labelsize': 10,
                   # 'text.usetex': True,
                   'axes.unicode_minus': True,
-                  'axes.color_cycle' : self.colors}
+                  'axes.color_cycle': self.colors}
 
         plt.rcParams.update(params)
 
@@ -49,20 +48,22 @@ class Plot(object):
         else:
             self.log = logging.getLogger(log)
 
-        if type(samples_list) is not list:
+        if type(sample_list) is not list:
             self.log.debug('CONVERTING Sample Instance to Samples List')
-            samples_list = [samples_list]
+            sample_list = [sample_list]
 
         self.name = name
 
         if folder is None:
             from os.path import expanduser
+
             folder = expanduser("~") + '/Desktop/'
 
         self.folder = folder
 
         self.norm = norm
-        self.samples = [i for i in samples_list]
+        self.samples = [i for i in sample_list]
+        self.sample_list = self.samples
 
         self.fig1 = options.get('fig', plt.figure(figsize=(8, 6), dpi=100))
 
@@ -82,6 +83,7 @@ class Plot(object):
         out_options = {'show': plt.show,
                        'rtn': self.get_fig,
                        'save': self.save_fig}
+
         if self.plot in ['show', 'save']:
             if not 'nolable' in args:
                 self.ax.set_xlabel(self.x_label)
@@ -102,28 +104,29 @@ class Plot(object):
 
 
 class Generic(Plot):
-    def __init__(self, samples_list, norm='mass',
+    def __init__(self, sample_list, norm='mass',
                  plot='show', folder=None, name='hysteresis',
                  plt_opt={},
                  **options):
         log = 'RockPy.PLOT.generic'
 
-        super(Generic, self).__init__(samples_list=samples_list,
+        super(Generic, self).__init__(sample_list=sample_list,
                                       norm=norm, log=log,
                                       plot=plot, folder=folder, name=name,
                                       **options)
-    def plot(self):
+
+    def plot(self):  # todo rename show
         pass
 
 
 class Af_Demag(Plot):
-    def __init__(self, samples_list, norm='mass',
+    def __init__(self, sample_list, norm='mass',
                  plot='show', folder=None, name='hysteresis',
                  plt_opt={}, **options):
 
 
         log = 'RockPy.PLOT.af-demag'
-        super(Af_Demag, self).__init__(samples_list=samples_list,
+        super(Af_Demag, self).__init__(sample_list=sample_list,
                                        norm=norm, log=log,
                                        plot=plot, folder=folder, name=name,
                                        **options)
@@ -134,7 +137,7 @@ class Af_Demag(Plot):
         self.show(dtype=self.dtype)
         self.out()
         # except AttributeError:
-        #     self.log.error('can\'t plot')
+        # self.log.error('can\'t plot')
 
     def show(self, dtype='m'):
         self.x_label = 'AF-field [mT]'
@@ -158,9 +161,10 @@ class Af_Demag(Plot):
         self.ax.ticklabel_format(style='plain', axis='x', useOffset=False)
         return self.ax
 
+
 class Data_Test(Af_Demag):
     def show(self, dtype):
-        plt_idx, line_idx, marker_idx = 0 ,0 ,0
+        plt_idx, line_idx, marker_idx = 0, 0, 0
         for sample in self.samples:
             plt_idx = self.samples.index(sample)
             measurements = sample.find_measurement('af-demag')
@@ -171,21 +175,22 @@ class Data_Test(Af_Demag):
                     marker_idx = 15
                 for dtype in list(self.dtype):
                     line_idx = self.dtype.index(dtype)
-                    plt_opt = {'color':self.colors[plt_idx], 'linestyle': self.lines[line_idx], 'marker':self.markers[marker_idx]}
+                    plt_opt = {'color': self.colors[plt_idx], 'linestyle': self.lines[line_idx],
+                               'marker': self.markers[marker_idx]}
                     af_demagnetization.af_plot(af_demag_obj=measurement, ax=self.ax, component=dtype, plt_opt=plt_opt)
-                    af_demagnetization.af_diff_plot(af_demag_obj=measurement, ax=self.ax, component=dtype, plt_opt=plt_opt)
-
+                    af_demagnetization.af_diff_plot(af_demag_obj=measurement, ax=self.ax, component=dtype,
+                                                    plt_opt=plt_opt)
 
 
 class PARM_spectra(Plot):
-    def __init__(self, samples_list, norm='mass', log=None,
+    def __init__(self, sample_list, norm='mass', log=None,
                  plot='show', folder=None, name='pARM-spectra',
                  plt_opt={}, **options):
 
         if not log:
             log = 'RockPy.PLOTTING.parm-spectra'
 
-        super(PARM_spectra, self).__init__(samples_list=samples_list,
+        super(PARM_spectra, self).__init__(sample_list=sample_list,
                                            norm=norm, log=log,
                                            plot=plot, folder=folder, name=name,
                                            **options)
@@ -223,7 +228,7 @@ class PARM_spectra(Plot):
                 plt_idx += 1
                 # std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
                 # self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
-                #                      color=std.get_color())
+                # color=std.get_color())
                 #
                 #         handles, labels = self.ax.get_legend_handles_labels()
                 #         self.ax.legend(handles, labels, prop={'size': 8})
@@ -254,40 +259,46 @@ class IRM(Plot):
 
 
 class Hysteresis(Plot):
-    log = 'RockPy.PLOTTING.hysteresis'
-
-    def __init__(self, samples_list, norm='mass', log=None, plot='show', folder=None, name='hysteresis', plt_opt=None,
+    def __init__(self, sample_list, norm='mass', log=None, plot='show', folder=None, name='hysteresis', plt_opt={},
                  **options):
 
-        if not plt_opt: plt_opt = {}
+        self.plt_opt = plt_opt
         if not log:
-            log = logging.getLogger('RockPy.PLOTTING.hysteresis')
+            log = 'RockPy.PLOTTING.hysteresis'
 
-        super(Hysteresis, self).__init__(samples_list=samples_list,
+        super(Hysteresis, self).__init__(sample_list=sample_list,
                                          norm=norm, log=log,
                                          plot=plot, folder=folder, name=name,
+                                         plt_opt=plt_opt,
                                          **options)
+        self.plt_virgin = options.get('plt_virgin', True)
+        self.plt_branches = options.get('plt_branches', True)
 
         self._get_labels()
-        try:
-            self.show()
-            self.out()
-        except AttributeError:
-            pass
+        self.show()
+        self.out()
 
     def show(self):
         for sample in self.samples:
-
             self.measurements = sample.find_measurement('hys')
             for measurement in self.measurements:
-                factor = {'mass': measurement.sample.mass_kg,
+                if measurement > 1:
+                    paramag_text = False
+                else:
+                    True
+
+                factor = {'mass': measurement.sample_obj.mass_kg,
                           'max': max(measurement.up_field[:, 1]),
                           'calibration': measurement.calibration_factor,
                           None: 1}
                 norm_factor = factor[self.norm]  # # NORMALIZATION FACTOR
 
-                self.ax = hysteresis.plot_hys(measurement, ax=self.ax, norm_factor=norm_factor, out='rtn')
-                self.ax = hysteresis.plot_virgin(measurement, ax=self.ax, norm_factor=norm_factor, out='rtn')
+                if self.plt_branches:
+                    hysteresis.plot_hys(measurement, ax=self.ax, norm_factor=norm_factor, out='rtn',
+                                        paramag_text=paramag_text, plt_opt=self.plt_opt)
+
+                if self.plt_virgin:
+                    hysteresis.plot_virgin(measurement, ax=self.ax, norm_factor=norm_factor, out='rtn')
 
     def _get_labels(self):
         self.x_label = 'Field [T]'
@@ -303,41 +314,17 @@ class Hysteresis(Plot):
 class Hys_Fabian2003(Hysteresis):
     log = general.create_logger('RockPy.PLOTTING.fabian2003_hys')
 
-    def __init__(self, samples_list, norm='mass', log=None, plot='show', folder=None, name='Fabian2003_hysteresis.pdf',
+    def __init__(self, sample_list,
+                 norm='mass', log=None, plot='show', folder=None, name='Fabian2003_hysteresis.pdf',
                  plt_opt=None, **options):
+
         if not plt_opt: plt_opt = {}
-        super(Hys_Fabian2003, self).__init__(samples_list=samples_list,
-                                             norm=norm, log=log, value=value,
+
+        super(Hys_Fabian2003, self).__init__(sample_list=sample_list,
+                                             norm=norm, log=log,
                                              plot=plot, folder=folder, name=name,
-                                             **options)
-
-        if len(self.samples) > 1:
-            self.log.warning('MORE THAN one sample found, using first one for plot')
-
-        self.hys = self.samples[0].find_measurement('hys')[0]
-        self.samples[0].find_measurement('hys')[0]
-
-        try:
-            self.coe = self.samples[0].find_measurement(mtype='coe')[0]
-        except IndexError:
-            self.log.error('NOT FOUND\t << coe >> measurement')
-            self.coe = None
-
-        self.factor = {'mass': self.hys.sample.mass_kg,
-                       'max': max(self.hys.up_field[:, 1]),
-                       'calibration': self.hys.calibration_factor,
-                       None: 1}
-
-        self.norm_factor = self.factor[norm]
-
-        self.ax.xaxis.major.formatter._useMathText = True
-        self.ax = plt.subplot2grid((1, 1), (0, 0), colspan=1, rowspan=1)
-
-        plt.suptitle(self.hys.sample.name)
-
-        self._get_labels()
-        self.show()
-        self.out()
+                                             plt_opt=plt_opt
+                                                     ** options)
 
     def add_label(self, ax=None):
         if ax is None:
@@ -354,7 +341,32 @@ class Hys_Fabian2003(Hysteresis):
 
 
     def show(self):
-        self.factor = {'mass': self.hys.sample.mass_kg,
+
+        if len(self.samples) > 1:
+            self.log.warning('MORE THAN one sample found, using first one for plot')
+
+        self.hys = self.samples[0].find_measurement('hys')[0]
+        self.samples[0].find_measurement('hys')[0]
+
+        try:
+            self.coe = self.samples[0].find_measurement(mtype='coe')[0]
+        except IndexError:
+            self.log.error('NOT FOUND\t << coe >> measurement')
+            self.coe = None
+
+        self.factor = {'mass': self.hys.sample_obj.mass_kg,
+                       'max': max(self.hys.up_field[:, 1]),
+                       'calibration': self.hys.calibration_factor,
+                       None: 1}
+
+        self.norm_factor = self.factor[self.norm]
+
+        self.ax.xaxis.major.formatter._useMathText = True
+        self.ax = plt.subplot2grid((1, 1), (0, 0), colspan=1, rowspan=1)
+
+        plt.suptitle(self.hys.sample_obj.name)
+
+        self.factor = {'mass': self.hys.sample_obj.mass_kg,
                        'max': max(self.hys.up_field[:, 1]),
                        'calibration': self.hys.calibration_factor,
                        None: 1}
@@ -368,13 +380,13 @@ class Hys_Fabian2003(Hysteresis):
             backfield.plot_coe(coe_obj=self.coe, ax=self.ax, norm_factor=self.norm_factor)
             backfield.add_bcr_line(coe_obj=self.coe, ax=self.ax, norm_factor=self.norm_factor, method='fit', text=True)
 
-        hysteresis.plot_hys(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
+        hysteresis.plot_hys(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn', plt_opt={'color': 'k'})
         hysteresis.plot_virgin(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
         hysteresis.plot_rev(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
         hysteresis.plot_irrev(self.hys, ax=self.ax, norm_factor=self.norm_factor, out='rtn')
 
         hysteresis.fill_hys(hys_obj=self.hys, ax=self.ax, norm_factor=self.norm_factor)
-        hysteresis.fill_virgin(hys_obj=self.hys, ax=self.ax, norm_factor=self.norm_factor)
+        # hysteresis.fill_virgin(hys_obj=self.hys, ax=self.ax, norm_factor=self.norm_factor)
 
         hysteresis.add_virgin_info(self.hys, ax=self.ax, norm_factor=self.norm_factor)
 
@@ -411,7 +423,7 @@ class Dunlop(Plot):
         if isinstance(sample_obj, RockPyV3.Structure.measurements.Thellier):
             sample_obj = sample_obj.sample
 
-        super(Dunlop, self).__init__(samples_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
+        super(Dunlop, self).__init__(sample_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
                                      name=name)
 
         for sample_obj in self.samples:
@@ -445,7 +457,7 @@ class Dunlop(Plot):
                 paleointensity.add_dunlop_labels(palint_object=measurement, ax=self.ax,
                                                  norm=norm, norm_factor=norm_factor,
                                                  text=True, plt_idx=idx)
-            self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name, fontsize=16)
+            self.fig1.suptitle('%s Dunlop Plot' % sample_obj.name)
             plt.tight_layout(pad=2.7)
 
         self.out(plot, 'nolable')
@@ -455,7 +467,7 @@ class Arai(Plot):
     def __init__(self, sample_obj, component='m', norm='mass', log=None, t_min=20, t_max=700, line=True, check=True,
                  plot='show', folder=None, name='arai plot', plt_opt=None, **options):
         if not plt_opt: plt_opt = {}
-        super(Arai, self).__init__(samples_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
+        super(Arai, self).__init__(sample_list=sample_obj, norm=norm, log=log, plot=plot, folder=folder,
                                    name=name)
         std = options.get('std', True)
         for sample_obj in self.samples:
@@ -535,13 +547,13 @@ class Arai(Plot):
 
 
 class Pseudo_Thellier(Plot):
-    def __init__(self, samples_list, component='m', norm='mass', log=None, plot='show', folder=None, name='hysteresis',
+    def __init__(self, sample_list, component='m', norm='mass', log=None, plot='show', folder=None, name='hysteresis',
                  plt_opt=None, **options):
 
         if not plt_opt: plt_opt = {}
         log = 'RockPy.PLOTTING.pseudo-thellier'
 
-        super(Pseudo_Thellier, self).__init__(samples_list=samples_list,
+        super(Pseudo_Thellier, self).__init__(sample_list=sample_list,
                                               norm=norm, log=log, value=value,
                                               plot=plot, folder=folder, name=name,
                                               **options)
@@ -578,3 +590,33 @@ class Pseudo_Thellier(Plot):
                                               check=False,
                                               norm_factor=norm_factor, component=self.component,
                                               plt_opt=self.plt_opt)
+
+
+class Henkel_Plot(Plot):
+    def __init__(self, sample_list, norm='mass',
+                 plot='show', folder=None, name='hysteresis',
+                 plt_opt={},
+                 **options):
+        log = 'RockPy.PLOT.henkel'
+
+        super(Henkel_Plot, self).__init__(sample_list=sample_list,
+                                          norm=norm, log=log,
+                                          plot=plot, folder=folder, name=name,
+                                          **options)
+        self.y_label = '$M_{IRM}$'
+        self.x_label = '$M_{backfield}$'
+
+        self.show()
+        self.out()
+
+    def show(self):  # todo rename show
+
+        for sample in self.sample_list:
+            coe = sample.find_measurement('coe')[0]
+            irm = sample.find_measurement('irm')[0]
+
+            ms = (coe.ms + irm.ms)/2
+            backfield.plot_henkel(coe_obj=coe, irm_obj=irm, ax=self.ax, norm_factor=[ms, ms])
+
+            if len(self.sample_list) == 1:
+                self.ax.set_title('Henkel Plot: %s' %sample.name)

@@ -467,9 +467,9 @@ class Sample():
             ' ADDING\t << diameter >> input: %.1f [%s] stored: %1f [m]' % (diameter, length_unit, self.diameter_m))
 
     def add_measurement(self,
-                        mtype=None, mfile=None, machine=None, # general
-                        mag_method='', # IRM
-                        af_obj = None, parm_obj = None, # pseudo-thellier
+                        mtype=None, mfile=None, machine=None,  # general
+                        mag_method='',  # IRM
+                        af_obj=None, parm_obj=None,  # pseudo-thellier
                         **options):
         '''
 
@@ -506,16 +506,18 @@ class Sample():
             'visc': measurements.Viscosity,
             'parm-spectra': measurements.pARM_spectra,
             'pseudo-thellier': measurements.Pseudo_Thellier,
+            'rmp': measurements.Thermo_Curve,
+            'forc': measurements.Forc,
         }
 
         if mtype.lower() in implemented:
             self.log.info(' ADDING\t << measurement >> %s' % mtype)
             measurement = implemented[mtype.lower()](self,
                                                      mtype=mtype, mfile=mfile, machine=machine,
-                                                     mag_method = mag_method,
-                                                     af_obj = af_obj, parm_obj = parm_obj,
+                                                     mag_method=mag_method,
+                                                     af_obj=af_obj, parm_obj=parm_obj,
                                                      **options
-                                                     )
+            )
             self.measurements.append(measurement)
             return measurement
         else:

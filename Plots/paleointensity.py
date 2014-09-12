@@ -45,21 +45,21 @@ def dunlop_std(palint_object, ax,
     components = {'x': 1, 'y': 2, 'z': 3, 'm': 4}
     idx = components[component]
     colors = helper.get_colors()
-    if palint_object.th_stdev:
+    if palint_object.th_stdev is not None:
         try:
             ax.fill_between(palint_object.th[:, 0],
                             (palint_object.th[:, idx] - palint_object.th_stdev[:, idx]) / norm_factor,
                             (palint_object.th[:, idx] + palint_object.th_stdev[:, idx]) / norm_factor,
-                            color=colors[0], alpha=0.1)
+                            color=colors[0], alpha=0.2)
 
             ax.fill_between(palint_object.sum[:, 0],
                             (palint_object.sum[:, idx] - palint_object.sum_stdev[:, idx]) / norm_factor,
                             (palint_object.sum[:, idx] + palint_object.sum_stdev[:, idx]) / norm_factor,
-                            color=colors[1], alpha=0.1)
+                            color=colors[1], alpha=0.2)
             ax.fill_between(palint_object.ptrm[:, 0],
                             (palint_object.ptrm[:, idx] - palint_object.ptrm_stdev[:, idx]) / norm_factor,
                             (palint_object.ptrm[:, idx] + palint_object.ptrm_stdev[:, idx]) / norm_factor,
-                            color=colors[2], alpha=0.1)
+                            color=colors[2], alpha=0.2)
         except AttributeError:
             return
     return ax
@@ -141,7 +141,7 @@ def arai_stdev(palint_object, ax,
     y_stdev, x_stdev = palint_object._get_th_ptrm_stdev_data(t_min=t_min, t_max=t_max)
 
     ax.fill_between(x[:, idx], y[:, idx] + y_stdev[:, idx], y[:, idx] - y_stdev[:, idx], color=colors[plt_idx],
-                    alpha=0.1)
+                    alpha=0.2)
     return ax
 
 
@@ -170,7 +170,7 @@ def add_arai_temps(palint_object, ax,
         ax.annotate(temp, xy=(ptrm[i][idx] / norm_factor[0], th[i][idx] / norm_factor[0]),
                     xytext=(ptrm[i][idx] / norm_factor[0], y_max - plt_idx * (y_max / 40)),
                     rotation=90, horizontalalignment='right', verticalalignment='top',
-                    arrowprops=dict(color='#555555', width=0.5, headwidth=0.5, alpha=0.1),
+                    arrowprops=dict(color='#555555', width=0.5, headwidth=0.5, alpha=0.2),
         )
         # line = lines.Line2D([ptrm[i][idx], ptrm[i][idx]], [th[i][idx], y_max], linestyle='-', color='#555555')
         #

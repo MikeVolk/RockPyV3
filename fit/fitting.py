@@ -78,7 +78,7 @@ class Log_Normal(Fit):
         fitout = minimize(errfunc, self.parameters, args=(self.x, self.y))
 
         self.fit_y = functions.log_normal(self.parameters, self.fit_x)
-        report_fit(self.parameters)
+        # report_fit(self.parameters)
 
     def calc(self, x_value):
         out = functions.log_normal(self.parameters, x_value)

@@ -33,7 +33,6 @@ class tensor():
         self.evecs = np.array(evecs)
         self.evals_norm = norm_evals
 
-
 class data(object):
     def __init__(self, variable, measurement, std_dev = None, time=None):
         '''
@@ -42,12 +41,17 @@ class data(object):
         self.log = logging.getLogger('RockPy.DATA.data%s' % str(measurement.shape))
         self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
         self.variable = variable
-        self.measurement = measurement
+        # print np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
+        self.measurement = np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
+
         self.std_dev = std_dev
         if time is None:
             time = np.empty(len(variable))
 
         self.time = time
+
+    def __repr__(self):
+        return '<Structure.data.data object len,dim: (%i,%i)> '%(self.len, self.dim)
 
     ''' data properties '''
 
@@ -77,8 +81,8 @@ class data(object):
         if self.measurement.shape[0] == self.measurement.size:
             return self.measurement
         else:
-            out = np.array(map(np.linalg.norm, self.measurement))
-            return out
+            # out = np.array(map(np.linalg.norm, self.measurement))
+            return self.measurement[:, 3]
 
     @property
     def d(self):
@@ -108,6 +112,9 @@ class data(object):
     def len(self):
         return len(self.measurement)
 
+    @property
+    def dim(self):
+        return len(self.measurement.T)
     # ## functions
 
     def max(self, component='m'):
@@ -143,6 +150,7 @@ class data(object):
 
         return self_copy
 
+
     ### calculations
     def __sub__(self, other):  #
         self_copy = self.__class__(copy.deepcopy(self.variable),
@@ -175,10 +183,13 @@ class data(object):
                                    copy.deepcopy(self.time))
 
         if isinstance(other, data):
-            self_copy.measurement = np.array(
-                [self_copy.measurement[i] / other.measurement[i] for i in range(len(self_copy.measurement))
-                 if self_copy.variable[i] == other.variable[i]])
-
+            if other.len != 1:
+                self_copy.measurement = np.array(
+                    [self_copy.measurement[i] / other.measurement[i] for i in range(len(self_copy.measurement))
+                     if self_copy.variable[i] == other.variable[i]])
+            else:
+                self_copy.measurement /= other.measurement
+                print self_copy.m
         if isinstance(other, np.ndarray):
             self_copy.measurement /= other
 
