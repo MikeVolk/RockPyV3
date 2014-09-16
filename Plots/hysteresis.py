@@ -6,6 +6,7 @@ from matplotlib import rc, lines
 This module is used for calling plotting functions
 '''
 
+
 def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf', plt_opt={}, **options):
     '''
     Main plotting of a hysteresis.
@@ -26,12 +27,12 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
 
     paramag_text = options.get('paramag_text', True)
 
-    ax.axhline(0, color='#555555') # 0 line horizontally
-    ax.axvline(0, color='#555555') # 0 line vertically
+    ax.axhline(0, color='#555555')  # 0 line horizontally
+    ax.axvline(0, color='#555555')  # 0 line vertically
 
     std, = ax.plot(hys_obj.up_field[:, 0], hys_obj.up_field[:, 1] / norm_factor, **plt_opt
-                       )
-
+    )
+    plt_opt.pop('color')
     ax.plot(hys_obj.down_field[:, 0], hys_obj.down_field[:, 1] / norm_factor,
             color=std.get_color(), **plt_opt)
 
@@ -51,6 +52,7 @@ def plot_hys(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
     if out == 'save':
         if folder is not None:
             plt.savefig(folder + hys_obj.samples[0].name + '_' + name, dpi=300)
+
 
 def plot_virgin(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
@@ -85,6 +87,7 @@ def plot_mrs_shift(hys_obj, ax, norm_factor=1, out='show', folder=None, name='ou
         if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
+
 def plot_rev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
     '''
@@ -98,6 +101,7 @@ def plot_rev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.p
     if out == 'save':
         if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
+
 
 def plot_irrev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
@@ -113,14 +117,15 @@ def plot_irrev(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output
         if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
 
+
 def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, name='output.pdf'):
     '''
     '''
     pos = np.array([[abs(i[0]), i[1]] for i in hys_obj.irr if i[0] > 0])
     neg = np.array([[abs(i[0]), i[1]] for i in hys_obj.irr if i[0] <= 0])
     # diff =
-    ax.plot(pos[:,0], pos[:,1], '-', label='pos. fields')
-    ax.plot(neg[:,0], neg[:,1], '-', label='neg. fields')
+    ax.plot(pos[:, 0], pos[:, 1], '-', label='pos. fields')
+    ax.plot(neg[:, 0], neg[:, 1], '-', label='neg. fields')
 
     if out == 'show':
         plt.legend()
@@ -130,7 +135,6 @@ def plot_irrev_assymetry(hys_obj, ax, norm_factor=1, out='show', folder=None, na
     if out == 'save':
         if folder is not None:
             plt.savefig(folder + self.samples[0].name + '_' + name, dpi=300)
-
 
 
 def add_virgin_info(hys_obj, ax, norm_factor=1):
@@ -176,11 +180,10 @@ def fill_virgin(hys_obj, ax=None, norm_factor=1):
                         color='#555555', alpha=0.2)
 
 
-####   LINES
+# ###   LINES
 
 def add_brh_line(hys_obj, ax, norm_factor=1):
     ''' Brh '''
-
 
     Brh = hys_obj.calculate_brh()
     YMX = max(hys_obj.up_field_interpolated[:, 1])
@@ -194,7 +197,7 @@ def add_brh_line(hys_obj, ax, norm_factor=1):
     return ax
 
 
-def add_bcr_line(hys_obj,ax, norm_factor = 1, text=False):
+def add_bcr_line(hys_obj, ax, norm_factor=1, text=False):
     Bcr_line = lines.Line2D([[self.coe.bcri, self.coe.bcri]],
                             [-max(hys_obj.down_field[:, 1]) / norm_factor, 0],
                             lw=1., ls=':', color='k', alpha=0.5)
@@ -202,7 +205,7 @@ def add_bcr_line(hys_obj,ax, norm_factor = 1, text=False):
     return ax
 
 
-def add_mdf_line(hys_obj,ax, norm_factor = 1):
+def add_mdf_line(hys_obj, ax, norm_factor=1):
     if ax is None:
         ax = self.ax
     MDF_line = lines.Line2D([[-2, 2]], [0.5 * max(hys_obj.irr[:, 1] / norm_factor),
@@ -212,20 +215,18 @@ def add_mdf_line(hys_obj,ax, norm_factor = 1):
     return ax
 
 
-def add_05ms_line(hys_obj,ax, norm_factor = 1, text = False):
-
+def add_05ms_line(hys_obj, ax, norm_factor=1, text=False):
     MDF_line = lines.Line2D([[-2, 2]], [0.5 * max(hys_obj.rev[:, 1] / norm_factor),
                                         0.5 * max(hys_obj.rev[:, 1] / norm_factor)],
                             lw=1., ls='--', color='k', alpha=0.5)
     ax.add_line(MDF_line)
 
     if text:
-        add_05ms_text(hys_obj=hys_obj ,ax=ax , norm_factor = norm_factor)
+        add_05ms_text(hys_obj=hys_obj, ax=ax, norm_factor=norm_factor)
     return ax
 
 
-def add_ms_line(hys_obj,ax, norm_factor = 1, text = False):
-
+def add_ms_line(hys_obj, ax, norm_factor=1, text=False):
     MS_line = lines.Line2D([[-2, 2]], [max(hys_obj.rev[:, 1] / norm_factor),
                                        max(hys_obj.rev[:, 1] / norm_factor)],
                            lw=1., ls='--', color='k', alpha=0.5)
@@ -235,10 +236,10 @@ def add_ms_line(hys_obj,ax, norm_factor = 1, text = False):
         add_ms_text(hys_obj=hys_obj, ax=ax, norm_factor=norm_factor)
     return ax
 
-####   TEXT
 
-def add_brh_text(hys_obj,ax):
+# ###   TEXT
 
+def add_brh_text(hys_obj, ax):
     Brh = hys_obj.calculate_brh()
     ax.text(-Brh[0], 0, '$B_{rh}=%.1f mT$' % (Brh[0] * 1000),
             horizontalalignment='right',
@@ -248,8 +249,7 @@ def add_brh_text(hys_obj,ax):
     return ax
 
 
-
-def add_05ms_text(hys_obj,ax = None, norm_factor=1):
+def add_05ms_text(hys_obj, ax=None, norm_factor=1):
     ax.text(min(hys_obj.down_field[:, 0]), 0.5 * hys_obj.ms[0] / norm_factor,
             '$\\frac{1}{2}M_{s}=%.2e$' % (0.5 * hys_obj.ms[0] / norm_factor),
             horizontalalignment='left',
@@ -259,8 +259,7 @@ def add_05ms_text(hys_obj,ax = None, norm_factor=1):
     return ax
 
 
-def add_ms_text(hys_obj,ax = None, norm_factor=1):
-
+def add_ms_text(hys_obj, ax=None, norm_factor=1):
     ax.text(min(hys_obj.down_field[:, 0]), hys_obj.ms[0] / norm_factor,
             '$M_{s}=%.2e$' % (hys_obj.ms[0] / norm_factor),
             horizontalalignment='left',

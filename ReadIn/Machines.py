@@ -103,6 +103,14 @@ def sushibar(file, sample, *args, **options):
     return out
 
 
+def jr6(file, sample=None):
+    log = logging.getLogger('RockPy.READIN.jr6')
+    log.info('IMPORTING\t Agico-JR6 file: << %s >>' % file)
+    data_f = open(file)
+    data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
+    print data
+
+
 def cryo_nl(file, sample=None):
     log = logging.getLogger('RockPy.READIN.CRYO_NL')
     log.info('IMPORTING\t cryomag file: << %s >>' % file)
@@ -251,11 +259,12 @@ def vsm_forc(file, sample=None):
     header = readMicroMagHeader(reader_object)  # get header
     raw_out = [i for i in reader_object][header['meta']['numberoflines']:]  # without header
 
-    #### header part
-    data_header = [i.split('\n')[0] for i in raw_out if not i.startswith('+') and not i.startswith('-') and not i.split() == []][:-1]
+    # ### header part
+    data_header = [i.split('\n')[0] for i in raw_out if
+                   not i.startswith('+') and not i.startswith('-') and not i.split() == []][:-1]
     aux = [i for i in data_header[-3:]]
-    h_len = len(aux[0]) / len(aux[-1].split())+1
-    splits = np.array([[i[x:x + h_len] for x in range(0, len(i), h_len)] for i in aux ]).T
+    h_len = len(aux[0]) / len(aux[-1].split()) + 1
+    splits = np.array([[i[x:x + h_len] for x in range(0, len(i), h_len)] for i in aux]).T
     splits = ["".join(i) for i in splits]
     splits = [' '.join(j.split()) for j in splits]
 
@@ -279,9 +288,10 @@ def vsm_forc(file, sample=None):
             aux = []
     out_data = np.array(out_data)
     out = {splits[i]: np.array([j[:, i] for j in out_data]) for i in range(len(splits))}
-    log.info('RETURNING data << %s >> ' %(' - '.join(out.keys())))
+    log.info('RETURNING data << %s >> ' % (' - '.join(out.keys())))
     out.update(header)
     return out
+
 
 def vsm(file, sample=None):
     log = logging.getLogger('RockPy.READIN.vsm')
@@ -363,7 +373,7 @@ def vftb(file, *args, **options):
     out = [i.strip('\r\n').split('\t') for i in reader_object.readlines()]
 
     mass = float(out[0][1].split()[1])
-    out = np.array(out [4:])
+    out = np.array(out[4:])
     idx1 = [i for i in range(len(out)) if '' in out[i]]
     idx2 = [i for i in range(len(out)) if 'Set 2:' in out[i]]
     idx3 = [i for i in range(len(out)) if ' field / Oe' in out[i]]
@@ -377,7 +387,7 @@ def vftb(file, *args, **options):
     out = np.array([map(float, i) for i in out[4:]])
     header = {"field": [0, float], "moment": [1, float], "temp": [2, float], "time": [3, float], "std dev": [4, float],
               "suscep / emu / g / Oe": [5, float],
-              }
+    }
 
     out = {column.lower(): np.array([header[column][1](i[header[column][0]]) for i in out]) for column in
            header}

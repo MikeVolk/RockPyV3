@@ -64,7 +64,7 @@ class Measurement(object):
             self.log.error('UNKNOWN\t measurement type: << %s >>' % mtype)
             return None
 
-        self.treatment = None
+        self.treatment = []
 
     def import_data(self, rtn_raw_data=None, **options):
         implemented = {'sushibar': {'af-demag': machines.sushibar,
@@ -72,8 +72,8 @@ class Measurement(object):
                                     'parm-spectra': machines.sushibar,
                                     'nrm': machines.sushibar,  # externally applied magnetization
                                     'trm': machines.sushibar,  # externally applied magnetization
-                                    'irm': machines.sushibar,  # externally applied magnetization
-                                    'arm': machines.sushibar,  # externally applied magnetization
+                                    'irm_moment': machines.sushibar,  # externally applied magnetization
+                                    'arm_moment': machines.sushibar,  # externally applied magnetization
         },
                        'vsm': {'hys': machines.vsm,
                                'irm': machines.vsm,
@@ -87,7 +87,9 @@ class Measurement(object):
                        },
                        'vftb': {'hys': machines.vftb,
                                 'coe': machines.vftb,
-                                'rmp': machines.vftb}}
+                                'rmp': machines.vftb},
+                       'jr6': {'irm_moment': machines.jr6,
+                       }}
 
         self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
 
@@ -125,19 +127,23 @@ class Measurement(object):
         self.__dict__.update({mtype: self.initial_state})
 
 
-    def add_treatment(self, ttype, options=None):
+    def add_treatment(self, ttype, **options):
         self.ttype = ttype.lower()
         self.log.info('ADDING\t treatment to measurement << %s >>' % self.ttype)
 
         implemented = {
             'pressure': treatments.Pressure,
+            'temp': treatments.Temperature,
         }
 
         if ttype.lower() in implemented:
-            self.treatment = implemented[ttype.lower()](self.sample_obj, self, options)
+            self.treatment.append(implemented[ttype.lower()](self.sample_obj, self, **options))
         else:
             self.log.error('UNKNOWN\t treatment type << %s >> is not know or not implemented' % ttype)
 
+    def find_treatment(self, ttype, **options):
+        out = [i for i in self.treatment if i.ttype == ttype]
+        return out
 
     def interpolate(self, what, x_new=None, derivative=0):
         """
@@ -177,6 +183,12 @@ class Measurement(object):
         if derivative > 0:
             self.log.info('RETURNING derivative << %i >>' % derivative)
         return out
+
+
+    def derivative(self, what, interpolate_first=False, **options):
+        out = self.calculate_derivative(what, interpolate_first=False, **options)
+        return out
+
 
     def calculate_derivative(self, what, interpolate_first=False, **options):
         """
@@ -252,6 +264,46 @@ class Measurement(object):
 
 # data [af_field, x,y,z,m]
 class Af_Demag(Measurement):
+    def __init__(self, sample_obj,
+                 mtype, mfile, machine,  # standard
+                 mag_method,  # measurement specific
+                 **options):
+
+        log = 'RockPy.MEASUREMENT.af-demag_new_data'
+        super(Af_Demag, self).__init__(sample_obj, mtype, mfile, machine, log)
+
+        self.mag_method = mag_method
+
+        try:
+            self.raw_data.pop('sample')
+            # self.__dict__.update(self.raw_data)
+            self.field = self.raw_data.pop('par1')
+            self.x = self.raw_data.pop('x')
+            self.y = self.raw_data.pop('y')
+            self.z = self.raw_data.pop('z')
+            self.std_m = self.raw_data.pop('m')
+            self.time = self.raw_data.pop('time')
+            print self.__dict__.keys()
+        except AttributeError:
+            self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
+            return None
+
+        except TypeError:
+            self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
+            return None
+
+
+    @property
+    def data(self):
+        # out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
+        out = data(variable=self.field, measurement=np.c_[self.x, self.y, self.z], std=
+        return out.T
+
+    def plot(self):
+        RPplt.Af_Demag(self.sample_obj)
+
+
+class Af_Demag_old_data(Measurement):
     def __init__(self, sample_obj,
                  mtype, mfile, machine,  # standard
                  mag_method,  # measurement specific
@@ -547,7 +599,7 @@ class Irm(Measurement):
 class Hysteresis(Measurement):
     '''
     A subclass of the measurement class. It devides the raw_data give into an **down_field** and **up_field** branch.
-    It will also look or a **virgibn** branch or an :math:`M_{si}` branch.
+    It will also look or a **virgin** branch or an :math:`M_{si}` branch.
 
 
 
@@ -564,13 +616,11 @@ class Hysteresis(Measurement):
         :param machine:
         :param mag_method:
         :rtype : hysteresis_object
-
-
         """
-
-        log = 'RockPy.MEASUREMENT.HYSTERESIS'
+        # todo refractor fields -> field
+        # todo refractor moments -> moment
+        log = 'RockPy.MEASUREMENT.hysteresis'
         Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
-
         if machine.lower() == 'vsm':
             self.info = self.raw_data[2]
             self.calibration_factor = float(self.info['SETTINGS']['Calibration factor'])
@@ -588,12 +638,21 @@ class Hysteresis(Measurement):
             self.fields = self.raw_data.get('field')
             self.moments = self.raw_data.get('moment')
 
+        try:
+            self.temperature = float(self.info['SETTINGS'].get('Temperature (command)', 295))
+        except:
+            self.temperature = 295.0
+
 
         # ## initialize
         self.virgin = None
         self.msi = None
         self.up_field = []
         self.down_field = []
+
+        self.field_fit = []
+        self.irrev_fit = []
+        self.rev_fit = []
 
         if machine.lower() == 'vsm':
             for i in range(len(self.fields)):
@@ -643,7 +702,7 @@ class Hysteresis(Measurement):
 
             self.mrs_msi = self.virgin[0, 1] / self.mrs[0]
 
-            if self.virgin[0, 1] >= 0.9 * self.mrs[0]:  # todo change back to 0.9
+            if self.virgin[0, 1] >= 0.9 * self.mrs[0]:
                 self.log.debug('FOUND\t << Msi branch >> saved as measurement.msi [field,moment]')
                 self.msi = self.virgin
             else:
@@ -753,18 +812,20 @@ class Hysteresis(Measurement):
 
         return out, [alpha, beta, slope, intercept, std_err]
 
-
     def fit_irrev(self):
         """
         This method will fit a function to the irreversible part of the hysteresis. It does not work yet.
 
 
         """
+        self.log.info('FITTING irreversible part')
+
         params = fitting.normal_skewed(self.irr[:, 0], self.irr[:, 1])
         self.field_fit = np.linspace(min(self.irr[:, 0]), max(self.irr[:, 0]), 500)
         self.irrev_fit = distributions.normal_skew(self.field_fit, parameters=params, check=False)
         self.irrev_fit /= max(self.irrev_fit)
-
+        out = np.c_[self.field_fit, self.irrev_fit]
+        return out
 
     def correction_holder(self):
         """
@@ -855,7 +916,7 @@ class Hysteresis(Measurement):
         self.log.info(
             'CALCULATING\t Mrs from NON interpolated data: df: %.1e, uf %.1e, mean: %.2e' % (mrs_df, mrs_uf, mrs))
 
-        out = [mrs, mrs_df, mrs_uf]  #[mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
+        out = [mrs, mrs_df, mrs_uf]  # [mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf]
         # self.log.info('RETURNING\t mrs_i, mrs_dfi, mrs_ufi, mrs, mrs_df, mrs_uf')
         self.log.info('RETURNING\t mrs, mrs_df, mrs_uf')
 
@@ -2295,7 +2356,7 @@ class Forc(Measurement):
         return mean_x, mean_y, -0.5 * coefficients[5], residues[0]
 
     @property
-    def return_fitting_surface(self):  #todo get working
+    def return_fitting_surface(self):  # todo get working
         '''
         function generates a list (fitdata) of lists, where each of the lists contains the value of Ha, Hb and the values of the sub-surface
         :return:
@@ -2335,7 +2396,7 @@ class Forc(Measurement):
 
         if self.temperature is None:
             self.temperature = [np.ones(len(i)) * 295 for i in
-                                self.moment]  #generates temp = 295C data if temp data not in data file
+                                self.moment]  # generates temp = 295C data if temp data not in data file
 
         nforc = int(self.raw_data['SCRIPT']['NForc'])
         start = len(self.field) - 2 * nforc
@@ -2350,7 +2411,7 @@ class Forc(Measurement):
 
         self.log.debug('GENERATING << individual forc >> data')
         self.forcs = np.array(
-            [np.array([self.field[i], self.moment[i]]) for i in range(start, len(self.moment))  #todo temperature
+            [np.array([self.field[i], self.moment[i]]) for i in range(start, len(self.moment))  # todo temperature
              if (i + (start % 2)) % 2 != 0])
 
         self.len_ha = len(self.forcs)
@@ -2385,16 +2446,16 @@ class Forc(Measurement):
                 aux = np.array([ha, hb, mhb])
                 forc_data.append(aux)
                 if not j == 0:
-                    mirror = np.array([aux[0], 2 * aux[0] - aux[1], 2 * mha - mhb])  #todo incorp temperature
+                    mirror = np.array([aux[0], 2 * aux[0] - aux[1], 2 * mha - mhb])  # todo incorp temperature
                     forc_data.append(mirror)
 
         self.forc_data = np.array(forc_data)
         self.hysteresis_df = np.array(hysteresis_df)
         self.hysteresis_uf = self.forcs[-1]
 
-        #todo calculate backfield from data and add coe measurement
+        # todo calculate backfield from data and add coe measurement
         self.backfield = self.calculate_backfield()
-        #todo calculate hysteresis from data
+        # todo calculate hysteresis from data
         # print self.forcs[-1]
         # self.backfield = np.array(backfield)
 
@@ -2415,7 +2476,7 @@ class Forc(Measurement):
         self.log.info('CALCULATING << backfield >> from forc')
 
         aux = []
-        n= 0
+        n = 0
         for i in self.forcs:
             n += 1
             idx = np.argmin(np.fabs(i[0]))
@@ -2423,13 +2484,13 @@ class Forc(Measurement):
             if ha < 0:
                 x = i[0][idx - 3:idx + 3]
                 y = i[1][idx - 3:idx + 3]
-                if len(x) >0:
+                if len(x) > 0:
                     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
                     mx = x.mean()
                     # my = y.mean()
                     sx2 = sum(((x - mx) ** 2))
-                    i = np.sqrt(1./ sx2)
+                    i = np.sqrt(1. / sx2)
 
                     # sxy = sum((x-mx)*(y-my))
                     # slope = sxy / sx2
@@ -2437,8 +2498,8 @@ class Forc(Measurement):
                     # y_new = x * slope + intercept
                     # sse = sum((y-y_new)**2)
                     # std_err = sse / (len(x)-2)
-                    sd_intercept = (std_err/i) * np.sqrt(1. / len(x) + mx ** 2 * mx / sx2)
-                    aux.append(np.array([ha, intercept, 2*sd_intercept]))
+                    sd_intercept = (std_err / i) * np.sqrt(1. / len(x) + mx ** 2 * mx / sx2)
+                    aux.append(np.array([ha, intercept, 2 * sd_intercept]))
         out = np.array(aux)
         return out
 
@@ -2446,7 +2507,7 @@ class Forc(Measurement):
         self.log.info('CACULATING forc data with smoothing factor << %i >>' % SF)
         self.SF = SF
 
-        #todo multiprocessing
+        # todo multiprocessing
         # pool = multiprocessing.Pool(processes=6)
         # self.fitted_forc_data = np.array(pool.map(self.__fitPolySurface, self.return_fitting_surface))
         # pool.close()
@@ -2458,7 +2519,7 @@ class Forc(Measurement):
         plt.axvline(color='#808080')
         plt.plot(self.backfield[:, 0], self.backfield[:, 1], '.-')
         plt.xlim([min(self.backfield[:, 0]), max(self.backfield[:, 0])])
-        plt.title('Backfield: %s' %self.sample_obj.name)
+        plt.title('Backfield: %s' % self.sample_obj.name)
         plt.xlabel('Field [T]')
         plt.ylabel('Moment')
         plt.show()
@@ -2521,7 +2582,7 @@ class Forc(Measurement):
 
         plt.contourf(self.xi, self.yi, self.zi, 30, cmap=plt.cm.get_cmap("jet"))
 
-        #plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='jet')
+        # plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='jet')
         plt.colorbar()  # draw colorbar
         plt.xlabel('Hb')
         plt.ylabel('Ha')
@@ -2637,9 +2698,9 @@ class Forc(Measurement):
         plt.xlabel('Hc')
         plt.ylabel('Hu')
         # show data points
-        #plt.scatter( x, y)
+        # plt.scatter( x, y)
         plt.title('FORC processed (SF=%d)' % self.SF)
-        #plt.axis('equal')
+        # plt.axis('equal')
         plt.axis('scaled')
 
         plt.xlim([sorted(xi)[50], xi.max()])
@@ -2667,9 +2728,9 @@ class Forc(Measurement):
         plt.xlabel('Hc')
         plt.ylabel('Hu')
         # show data points
-        #plt.scatter( x, y)
+        # plt.scatter( x, y)
         plt.title('FORC processed (SF=%d)' % self.SF)
-        #plt.axis('equal')
+        # plt.axis('equal')
 
         plt.xlim([0, 0.1])
         plt.ylim([-0.1, 0.03])

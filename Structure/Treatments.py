@@ -7,18 +7,41 @@ from RockPyV3.Functions import general
 class Treatment(object):
     # general.create_logger('RockPy.TREATMENT')
 
-    def __init__(self, sample, measurement, ttype, log=None):
+    def __init__(self, sample, measurement, ttype, log=None, **options):
         if not log:
             self.log = logging.getLogger('RockPy.TREATMENT')
+        else:
+            self.log = logging.getLogger(log)
         self.sample = sample
         self.measurement = measurement
         self.ttype = ttype
 
 
+class Temperature(Treatment):
+    def __init__(self, sample, measurement, **options):
+        log = 'RockPy.TREATMENT.temperature'
+        super(Temperature, self).__init__(sample, measurement, ttype='temperature', log=log, **options)
+        self.log.info('CREATING\t new treatment << %s >> for sample << %s >> | measurement << %s >>' % (
+            self.ttype, self.sample.name, self.measurement.mtype))
+
+        self.t_unit = options.get('t_unit', '°C')
+        self.temperature = options.get('temp', 295)
+        self.label = self.get_label()
+
+        self.value = self.temperature
+
+    def get_label(self):
+        label = str(self.temperature) + ' ' + self.t_unit
+        return label
+
+    def __repr__(self):
+        return 'treatment | temperature | ' + str(self.temperature) + ' ' + self.t_unit
+
+
 class Pressure(Treatment):
     # general.create_logger('RockPy.TREATMENT.pressure')
 
-    def __init__(self, sample, measurement, options):
+    def __init__(self, sample, measurement, **options):
         self.log = logging.getLogger('RockPy.TREATMENT.pressure')
         super(Pressure, self).__init__(sample, measurement, ttype='pressure')
         self.log.info('CREATING\t new treatment << %s >> for sample << %s >> | measurement << %s >>' % (
@@ -34,6 +57,7 @@ class Pressure(Treatment):
         self.p_unit = options.get('p_unit', 'GPa')
         self.p_max = p_max
         self.p_seen = p_seen
+        self.value = self.p_seen
         self.label = self.get_label()
 
     def get_label(self):

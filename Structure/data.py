@@ -33,8 +33,9 @@ class tensor():
         self.evecs = np.array(evecs)
         self.evals_norm = norm_evals
 
+
 class data(object):
-    def __init__(self, variable, measurement, std_dev = None, time=None):
+    def __init__(self, variable, measurement, std_dev=None, time=None, ):
         '''
         Generic 3D / 1D data containe with rudimentary functions concerning paleomagnetic data
         '''
@@ -51,7 +52,7 @@ class data(object):
         self.time = time
 
     def __repr__(self):
-        return '<Structure.data.data object len,dim: (%i,%i)> '%(self.len, self.dim)
+        return '<Structure.data.data object len,dim: (%i,%i)> ' % (self.len, self.dim)
 
     ''' data properties '''
 
@@ -115,6 +116,7 @@ class data(object):
     @property
     def dim(self):
         return len(self.measurement.T)
+
     # ## functions
 
     def max(self, component='m'):
@@ -141,17 +143,17 @@ class data(object):
                                    copy.deepcopy(self.time))
 
         aux = [[self_copy.variable[i],
-             np.array((self_copy.measurement[i - strength] - self_copy.measurement[i + strength]) / (
-             self_copy.variable[i - strength] - self_copy.variable[i + strength]))]
-            for i in range(strength, len(self_copy.variable) - strength)]
+                np.array((self_copy.measurement[i - strength] - self_copy.measurement[i + strength]) / (
+                    self_copy.variable[i - strength] - self_copy.variable[i + strength]))]
+               for i in range(strength, len(self_copy.variable) - strength)]
 
-        self_copy.variable = np.array([ i[0] for i in aux])
-        self_copy.measurement = np.array([ i[1] for i in aux])
+        self_copy.variable = np.array([i[0] for i in aux])
+        self_copy.measurement = np.array([i[1] for i in aux])
 
         return self_copy
 
 
-    ### calculations
+    # ## calculations
     def __sub__(self, other):  #
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
@@ -203,10 +205,11 @@ class data(object):
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
 
-        idx = [i for i in range(len(self_copy.variable)) if self_copy.variable[i] not in other.variable] # indices of self, not in common with other
+        idx = [i for i in range(len(self_copy.variable)) if
+               self_copy.variable[i] not in other.variable]  # indices of self, not in common with other
 
         if idx:
-            self.log.info('FOUND different variables deleting << %i >> non-equal' %len(idx))
+            self.log.info('FOUND different variables deleting << %i >> non-equal' % len(idx))
             for i in idx:
                 self_copy.variable = np.delete(self_copy.variable, i)
                 self_copy.measurement = np.delete(self_copy.measurement, i, axis=0)
@@ -238,9 +241,10 @@ class data(object):
         if up_lim is None:
             up_lim = max(self_copy.variable)
 
-        idx = [i for i in range(len(self_copy.variable)) if self_copy.variable[i] < low_lim if self_copy.variable[i] > up_lim]
+        idx = [i for i in range(len(self_copy.variable)) if self_copy.variable[i] < low_lim if
+               self_copy.variable[i] > up_lim]
         if idx:
-            self.log.debug('FOUND variables not within specified range deleting << %i >> non-equal' %len(idx))
+            self.log.debug('FOUND variables not within specified range deleting << %i >> non-equal' % len(idx))
             for i in idx:
                 self_copy.variable = np.delete(self_copy.variable, i)
                 self_copy.measurement = np.delete(self_copy.measurement, i)

@@ -157,7 +157,7 @@ class Af_Demag(Plot):
                 plt_idx += 1
             plt_idx += 1
 
-        self.ax.legend(handles, labels)
+        # self.ax.legend(handles, labels)
         self.ax.ticklabel_format(style='plain', axis='x', useOffset=False)
         return self.ax
 
@@ -230,8 +230,8 @@ class PARM_spectra(Plot):
                 # self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
                 # color=std.get_color())
                 #
-                #         handles, labels = self.ax.get_legend_handles_labels()
-                #         self.ax.legend(handles, labels, prop={'size': 8})
+                # handles, labels = self.ax.get_legend_handles_labels()
+                # self.ax.legend(handles, labels, prop={'size': 8})
                 # plt.show()
 
 
@@ -259,7 +259,10 @@ class IRM(Plot):
 
 
 class Hysteresis(Plot):
-    def __init__(self, sample_list, norm='mass', log=None, plot='show', folder=None, name='hysteresis', plt_opt={},
+    def __init__(self, sample_list, norm='mass',
+                 log=None,
+                 plot='show', folder=None, name='hysteresis',
+                 plt_opt={},
                  **options):
 
         self.plt_opt = plt_opt
@@ -323,8 +326,8 @@ class Hys_Fabian2003(Hysteresis):
         super(Hys_Fabian2003, self).__init__(sample_list=sample_list,
                                              norm=norm, log=log,
                                              plot=plot, folder=folder, name=name,
-                                             plt_opt=plt_opt
-                                                     ** options)
+                                             plt_opt=plt_opt,
+                                             **options)
 
     def add_label(self, ax=None):
         if ax is None:
@@ -615,9 +618,9 @@ class Henkel_Plot(Plot):
             coe = sample.find_measurement('coe')[0]
             irm = sample.find_measurement('irm')[0]
 
-            ms = (coe.ms + irm.ms)/2
+            ms = (coe.ms + irm.ms) / 2
 
             backfield.plot_henkel(coe_obj=coe, irm_obj=irm, ax=self.ax, norm_factor=[ms, ms])
 
             if len(self.sample_list) == 1:
-                self.ax.set_title('Henkel Plot: %s' %sample.name)
+                self.ax.set_title('Henkel Plot: %s' % sample.name)
