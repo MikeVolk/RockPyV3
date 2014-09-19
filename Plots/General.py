@@ -10,6 +10,7 @@ import matplotlib
 from matplotlib import rc, lines
 import numpy as np
 import backfield, hysteresis, af_demagnetization
+from matplotlib.lines import Line2D
 
 
 class Plot(object):
@@ -17,6 +18,8 @@ class Plot(object):
                  plot='show', folder=None, name='output.pdf',
                  plt_opt={},
                  **options):
+
+        # todo dynamically generated colors in " variable to color" function e.g. height from blue to red ...
 
         self.colors = helper.get_colors()
         self.plot_marker = options.get('marker', True)
@@ -103,6 +106,134 @@ class Plot(object):
             plt.savefig(self.folder + self.name, dpi=300)
 
 
+class REM_dash_total(Plot):
+    def __init__(self, sample_list, norm='mass',
+                 plot='show', folder=None, name='REM_total',
+                 plt_opt={},
+                 **options):
+        log = 'RockPy.PLOT.rem'
+
+        super(REM_dash_total, self).__init__(sample_list=sample_list,
+                                  norm=norm, log=log,
+                                  plot=plot, folder=folder, name=name,
+                                  **options)
+        self.show()
+        self.out()
+
+    def show(self):
+        plt_idx = 0
+        self.ax.yaxis.grid(b=True, linewidth=1, which='major', color='#808080', linestyle='--', zorder=1)
+        self.ax.yaxis.grid(b=True, linewidth=1, which='minor', color='#808080', linestyle=':', zorder=1, alpha=0.5)
+
+        for sample in self.sample_list:
+            irm_af = sample.find_measurement(mtype='af-demag', mag_method='irm')
+            nrm_af = sample.find_measurement(mtype='af-demag', mag_method='nrm')
+
+            if not nrm_af:
+                self.log.info('NO nrm-af-demagnetization found trying << ARM >>')
+                nrm_af = sample.find_measurement(mtype='af-demag', mag_method='arm')
+            af_demagnetization.REM_line(af_demag_obj1=irm_af[0], af_demag_obj2=nrm_af[0], ax=self.ax, plt_opt={'color':self.colors[plt_idx]})
+            self.nrm_irm_af(af_demag_obj1=irm_af[0], af_demag_obj2=nrm_af[0], ax=self.ax, plt_opt={'color':self.colors[plt_idx]})
+            plt_idx += 1
+        self.ax.set_title('REM\' %s' % [i.name for i in self.sample_list])
+        self.x_label = 'AF field [mT]'
+        self.y_label = 'd(NRM)/dB / d(SIRM)/dB [REM\'] '
+
+        if len(self.sample_list) > 1:
+            plt.legend(loc='best')
+        plt.tight_layout(pad=2)
+
+    def nrm_irm_af(self, af_demag_obj1, af_demag_obj2, ax,
+             component='m', norm_factor=[1, 1],
+             out='show', folder=None, name='output.pdf',
+             plt_opt=dict(),
+             **options):
+
+        irm_aux = af_demag_obj1.data.equal_var(af_demag_obj2.data).derivative()
+        nrm_aux = af_demag_obj2.data.equal_var(af_demag_obj1.data).derivative()
+
+        name = af_demag_obj1.sample_obj.name
+
+        irm = getattr(irm_aux, component)
+        nrm = getattr(nrm_aux, component)
+
+        data = nrm/irm
+        field = getattr(irm_aux, 'variable')
+
+        ax.plot(field, data, 'o-', label = name, **plt_opt)
+        ax.set_yscale('log')
+        ax.set_xscale('linear')
+
+
+class REM_dash_log(Plot):
+    def __init__(self, sample_list, norm='mass',
+                 plot='show', folder=None, name='REM\'',
+                 plt_opt={},
+                 **options):
+        log = 'RockPy.PLOT.rem_dash'
+
+        super(REM_dash_log, self).__init__(sample_list=sample_list,
+                                  norm=norm, log=log,
+                                  plot=plot, folder=folder, name=name,
+                                  **options)
+        self.show()
+        self.out()
+
+    def show(self):
+
+        for sample in self.sample_list:
+            irm_af = sample.find_measurement(mtype='af-demag', mag_method='irm')
+            nrm_af = sample.find_measurement(mtype='af-demag', mag_method='nrm')
+
+            if not nrm_af:
+                self.log.info('NO nrm-af-demagnetization found trying << ARM >>')
+                nrm_af = sample.find_measurement(mtype='af-demag', mag_method='arm')
+            af_demagnetization.d_log_diff_af(af_demag_obj1=irm_af[0], af_demag_obj2=nrm_af[0], ax=self.ax)
+        af_demagnetization.d_log_iso_lines(ax=self.ax)
+
+        self.ax.set_title('REM\' %s' % [i.name for i in self.sample_list])
+        self.x_label = 'dM(SIRM)/dB(AF)'
+        self.y_label = 'dM(NRM)/dB(AF)'
+
+        if len(self.sample_list) > 1:
+            plt.legend(loc='best')
+        plt.tight_layout(pad=2)
+
+
+class REM_residual_log(Plot):
+    def __init__(self, sample_list, norm='mass',
+                 plot='show', folder=None, name='REM\'',
+                 plt_opt={},
+                 **options):
+        log = 'RockPy.PLOT.rem_dash'
+
+        super(REM_residual_log, self).__init__(sample_list=sample_list,
+                                  norm=norm, log=log,
+                                  plot=plot, folder=folder, name=name,
+                                  **options)
+        self.show()
+        self.out()
+
+    def show(self):
+
+        for sample in self.sample_list:
+            irm_af = sample.find_measurement(mtype='af-demag', mag_method='irm')
+            nrm_af = sample.find_measurement(mtype='af-demag', mag_method='nrm')
+
+            if not nrm_af:
+                self.log.info('NO nrm-af-demagnetization found trying << ARM >>')
+                nrm_af = sample.find_measurement(mtype='af-demag', mag_method='arm')
+            af_demagnetization.d_log_af(af_demag_obj1=irm_af[0], af_demag_obj2=nrm_af[0], ax=self.ax)
+        af_demagnetization.d_log_iso_lines(ax=self.ax)
+
+        self.ax.set_title('REM\' %s' % [i.name for i in self.sample_list])
+        self.x_label = 'dM(SIRM)/dB(AF)'
+        self.y_label = 'dM(NRM)/dB(AF)'
+
+        if len(self.sample_list) > 1:
+            plt.legend(loc='best')
+        plt.tight_layout(pad=2)
+
 class Generic(Plot):
     def __init__(self, sample_list, norm='mass',
                  plot='show', folder=None, name='hysteresis',
@@ -115,11 +246,53 @@ class Generic(Plot):
                                       plot=plot, folder=folder, name=name,
                                       **options)
 
-    def plot(self):  # todo rename show
+    def show(self):  # todo rename show
         pass
 
 
 class Af_Demag(Plot):
+    def __init__(self, sample_list, norm='mass',
+                 plot='show', folder=None, name='af-demagnetization',
+                 plt_opt={}, **options):
+
+
+        log = 'RockPy.PLOT.af-demag'
+        super(Af_Demag, self).__init__(sample_list=sample_list,
+                                       norm=norm, log=log,
+                                       plot=plot, folder=folder, name=name,
+                                       **options)
+
+        self.dtype = options.get('dtype', 'm')
+
+        self.normalization = {'m': [1, max],
+                              'x': [1, max],
+                              'y': [1, max],
+                              'z': [1, max],
+        }
+
+        self.show(dtype=self.dtype)
+        self.out()
+
+    def show(self, dtype='m'):
+        self.x_label = 'AF-field [mT]'
+        self.y_label = 'magentic moment'
+        plt_idx = 0
+
+        for sample in self.samples:
+            measurements = sample.find_measurement('af-demag')
+            for measurement in measurements:
+                nf = [1, max(measurement.data.m)]
+                af_demagnetization.af_plot(measurement, ax=self.ax, norm_factor=nf)
+                plt_idx += 1
+            plt_idx += 1
+
+        self.ax.set_title('AF-demagnetization %s' % [i.name for i in self.samples])
+        # self.ax.legend(handles, labels)
+        self.ax.ticklabel_format(style='plain', axis='x', useOffset=False)
+        return self.ax
+
+
+class Af_Demag_old_style_data(Plot):
     def __init__(self, sample_list, norm='mass',
                  plot='show', folder=None, name='hysteresis',
                  plt_opt={}, **options):

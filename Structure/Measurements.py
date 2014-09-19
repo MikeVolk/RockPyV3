@@ -1,15 +1,15 @@
 # coding=utf-8
 __author__ = 'Mike'
-
+import RockPyV3
 from RockPyV3.Functions import general
 from RockPyV3 import Functions
 from RockPyV3.ReadIn import machines, helper
 from RockPyV3.fit import fitting, distributions, functions
-
+from RockPyV3.Structure.data import data
 import RockPyV3.Plots.general as RPplt
-from RockPyV3.Plots import hysteresis, viscotity
+from RockPyV3.Plots import hysteresis, viscosity
 from RockPyV3.Paleointensity import statistics
-import treatments, data
+import treatments
 import logging
 import numpy as np
 import scipy as sp
@@ -67,6 +67,7 @@ class Measurement(object):
         self.treatment = []
 
     def import_data(self, rtn_raw_data=None, **options):
+
         implemented = {'sushibar': {'af-demag': machines.sushibar,
                                     'af': machines.sushibar,
                                     'parm-spectra': machines.sushibar,
@@ -89,13 +90,19 @@ class Measurement(object):
                                 'coe': machines.vftb,
                                 'rmp': machines.vftb},
                        'jr6': {'irm_moment': machines.jr6,
+                               'af-demag':machines.jr6,
+                               'nrm': machines.jr6,
+                               'arm': machines.jr6,
+                               'irm': machines.jr6,
+                               'trm': machines.jr6,
                        }}
-
-        self.log.info(' IMPORTING << %s , %s >> data' % (self.machine, self.mtype))
 
         machine = options.get('machine', self.machine)
         mtype = options.get('mtype', self.mtype)
         mfile = options.get('mfile', self.mfile)
+
+        # print machine, mtype, mfile
+        self.log.info(' IMPORTING << %s , %s >> data' % (machine, mtype))
 
         if machine in implemented:
             if mtype in implemented[machine]:
@@ -119,11 +126,18 @@ class Measurement(object):
                           mtype, mfile, machine,  # standard
                           **options):
         initial_state = options.get('initial_variable', 0.0)
+
         self.log.info(' ADDING  initial state to measurement << %s >> data' % self.mtype)
         self.is_raw_data = self.import_data(machine=machine, mfile=mfile, mtype=mtype, rtn_raw_data=True)
+
         components = ['x', 'y', 'z', 'm']
-        self.initial_state = np.array([self.is_raw_data[i] for i in components]).T
-        self.initial_state = np.c_[initial_state, self.initial_state]
+        try:
+            self.initial_state = np.array([self.is_raw_data[i] for i in components]).T
+            self.initial_state = np.c_[initial_state, self.initial_state]
+        except:
+            self.initial_state = data(variable=initial_state,
+                                      measurement= np.array([self.is_raw_data[i] for i in components[:-1]]).T,
+                                      )
         self.__dict__.update({mtype: self.initial_state})
 
 
@@ -274,16 +288,23 @@ class Af_Demag(Measurement):
 
         self.mag_method = mag_method
 
+        format = {'jr6': self.jr6_data_format,
+                  'sushibar': self.sushibar_data_format,
+                  }
+
+        format[machine]()
+
         try:
             self.raw_data.pop('sample')
             # self.__dict__.update(self.raw_data)
-            self.field = self.raw_data.pop('par1')
+            self.variable = self.raw_data.pop('par1')
+            self.field = self.variable
             self.x = self.raw_data.pop('x')
             self.y = self.raw_data.pop('y')
             self.z = self.raw_data.pop('z')
-            self.std_m = self.raw_data.pop('m')
+            self.std_m = self.raw_data.pop('sm')
             self.time = self.raw_data.pop('time')
-            print self.__dict__.keys()
+
         except AttributeError:
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
@@ -292,12 +313,34 @@ class Af_Demag(Measurement):
             self.log.error('SOMETHING IS NOT RIGHT - raw data not transfered')
             return None
 
+        except:
+            pass
+
+    def jr6_data_format(self):
+        self.log.debug('FORMATTING raw_data using << jr6 >> data_format')
+        self.field = self.raw_data.pop('mode')
+        self.x = self.raw_data.pop('x')
+        self.y = self.raw_data.pop('y')
+        self.z = self.raw_data.pop('z')
+        self.std_m = np.zeros(len(self.y))
+        self.time = np.zeros(len(self.y))
+
+    def sushibar_data_format(self):
+        self.log.debug('FORMATTING raw_data using << sushibar >> data_format')
+        self.raw_data.pop('sample')
+        # self.__dict__.update(self.raw_data)
+        self.variable = self.raw_data.pop('par1')
+        self.field = self.variable
+        self.x = self.raw_data.pop('x')
+        self.y = self.raw_data.pop('y')
+        self.z = self.raw_data.pop('z')
+        self.std_m = self.raw_data.pop('sm')
+        self.time = self.raw_data.pop('time')
 
     @property
     def data(self):
-        # out = np.vstack((self.fields, self.x, self.y, self.z, self.m))
-        out = data(variable=self.field, measurement=np.c_[self.x, self.y, self.z], std=
-        return out.T
+        out = RockPyV3.data(variable=self.field, measurement=np.c_[self.x, self.y, self.z], std=self.std_m, time=self.time)
+        return out
 
     def plot(self):
         RPplt.Af_Demag(self.sample_obj)

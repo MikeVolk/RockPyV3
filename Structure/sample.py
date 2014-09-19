@@ -566,14 +566,25 @@ class Sample():
 
     ''' FIND FUNCTIONS '''
 
-    def find_measurement(self, mtype):
+    def find_measurement(self, mtype, **options):
         self.log.info('SEARCHING\t measurements with mtype << %s >>' % (mtype.lower()))
         out = [m for m in self.measurements if m.mtype == mtype.lower()]
+
         if len(out) != 0:
-            self.log.info('FOUND\t sample << %s >> has %i measurements with mtype << %s >>' % (
+            self.log.debug('FOUND\t sample << %s >> has %i measurements with mtype << %s >>' % (
                 self.name, len(out), mtype.lower()))
         else:
             self.log.error('UNKNOWN\t mtype << %s >> or no measurement found' % mtype.lower())
+            return
+
+        for key in options:
+            out = [m for m in out if getattr(m, key) == options[key]]
+
+        if len(out) != 0:
+            self.log.info('FOUND\t sample << %s >> has %i measurements with mtype << %s >> and options: << %s >>' % (
+                self.name, len(out), mtype.lower(), options.items()))
+        else:
+            self.log.error('UNKNOWN\t options << %s >> ' % options.items())
         return out
 
 

@@ -35,19 +35,29 @@ class tensor():
 
 
 class data(object):
-    def __init__(self, variable, measurement, std_dev=None, time=None, ):
+    def __init__(self, variable, measurement, std=None, time=None, ):
         '''
         Generic 3D / 1D data containe with rudimentary functions concerning paleomagnetic data
         '''
         self.log = logging.getLogger('RockPy.DATA.data%s' % str(measurement.shape))
-        self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
-        self.variable = variable
+        self.variable = np.array(variable)
         # print np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
+
+        if len(measurement.T) >= 4:
+            # check for x,y,z,m data
+            self.log.info('DIMENSION of << m >> is larger than 3(x,y,z) -> reducing to 3')
+            measurement = measurement[:, :3]
+
+        self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
         self.measurement = np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
 
-        self.std_dev = std_dev
+        self.std_dev = std
+
         if time is None:
-            time = np.empty(len(variable))
+            try:
+                time = np.empty(len(self.variable))
+            except:
+                time = None
 
         self.time = time
 
@@ -82,8 +92,11 @@ class data(object):
         if self.measurement.shape[0] == self.measurement.size:
             return self.measurement
         else:
-            # out = np.array(map(np.linalg.norm, self.measurement))
             return self.measurement[:, 3]
+
+    def recalc_m(self):
+        self.log.info('RECALCULATING << m >> data')
+        self.measurement[:, 3] = np.array([np.linalg.norm(i) for i in self.measurement[:, :3]])
 
     @property
     def d(self):
@@ -137,7 +150,7 @@ class data(object):
         else:
             self.log.error('COMPONENT << %s >> not found' % component)
 
-    def diff(self, strength=1):
+    def derivative(self, strength=1):
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
@@ -149,20 +162,26 @@ class data(object):
 
         self_copy.variable = np.array([i[0] for i in aux])
         self_copy.measurement = np.array([i[1] for i in aux])
-
+        self_copy.recalc_m()
         return self_copy
 
 
     # ## calculations
     def __sub__(self, other):  #
+        '''
+        vector subtraction
+        '''
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
+        # self_copy = copy.deepcopy(self)
 
         if isinstance(other, data):
             self_copy.measurement = np.array(
                 [self_copy.measurement[i] - other.measurement[i] for i in range(len(self_copy.measurement))
-                 if self_copy.variable[i] == other.variable[i]])
+                 if self_copy.variable[i] == other.variable[i]
+                ])
+            self_copy.recalc_m()
 
         if isinstance(other, np.ndarray):
             try:
@@ -172,11 +191,36 @@ class data(object):
         return self_copy
 
     def __add__(self, other):
+
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                                   copy.deepcopy(self.measurement),
+                                   copy.deepcopy(self.time))
+        if isinstance(other, data):
+            self_copy.measurement += other.measurement
+            self_copy.recalc_m()
+
+        if isinstance(other, np.ndarray) or isinstance(other, float) or isinstance(other, int):
+            self_copy.measurement += other
+
+        return self_copy
+
+    def __mul__(self, other):
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
 
-        self_copy.measurement += other.measurement
+        if isinstance(other, data):
+            if other.len != 1:
+                self_copy.measurement = np.array(
+                    [self_copy.measurement[i] * other.measurement[i] for i in range(len(self_copy.measurement))
+                     if self_copy.variable[i] == other.variable[i]])
+                self.recalc_m()
+            else:
+                self_copy.measurement *= other.measurement
+                print self_copy.m
+        if isinstance(other, np.ndarray) or isinstance(other, float) or isinstance(other, int):
+            self_copy.measurement *= other
+
         return self_copy
 
     def __div__(self, other):
@@ -192,7 +236,7 @@ class data(object):
             else:
                 self_copy.measurement /= other.measurement
                 print self_copy.m
-        if isinstance(other, np.ndarray):
+        if isinstance(other, np.ndarray) or isinstance(other, float) or isinstance(other, int):
             self_copy.measurement /= other
 
         return self_copy
@@ -201,6 +245,8 @@ class data(object):
         '''
         returns data object that has only the same variables as the other data_obj
         '''
+
+        #todo interpolation of data
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
@@ -210,7 +256,7 @@ class data(object):
 
         if idx:
             self.log.info('FOUND different variables deleting << %i >> non-equal' % len(idx))
-            for i in idx:
+            for i in idx[::-1]:
                 self_copy.variable = np.delete(self_copy.variable, i)
                 self_copy.measurement = np.delete(self_copy.measurement, i, axis=0)
                 self_copy.time = np.delete(self_copy.time, i)
@@ -251,3 +297,21 @@ class data(object):
                 self_copy.time = np.delete(self_copy.time, i)
 
         return self_copy
+
+    @property
+    def self_copy(self):
+        self_copy = self.__class__(copy.deepcopy(self.variable),
+                           copy.deepcopy(self.measurement[:,:3]),
+                           copy.deepcopy(self.time))
+        return self_copy
+
+    def normalize(self, value = 1):
+        out = self / value
+        out.recalc_m()
+        return out
+
+    def normalize_initial_m(self):
+        norm_factor = abs(self.m[0])
+        out = self / norm_factor
+        out.recalc_m()
+        return out

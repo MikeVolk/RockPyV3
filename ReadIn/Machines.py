@@ -106,10 +106,37 @@ def sushibar(file, sample, *args, **options):
 def jr6(file, sample=None):
     log = logging.getLogger('RockPy.READIN.jr6')
     log.info('IMPORTING\t Agico-JR6 file: << %s >>' % file)
-    data_f = open(file)
-    data = [i.strip('\n\r').split('\t') for i in data_f.readlines()]
-    print data
 
+    header = ['sample', 'mode', 'x', 'y', 'z', 'exponent']
+    floats = ['x', 'y', 'z', 'exponent']
+
+    data_f = open(file)
+    data = [i.strip('\r\n').split(' ') for i in data_f.readlines()]
+    data = [[j for j in i if j != ''] for i in data]
+
+    sample_data = np.array([i for i in data if i[0] == sample])
+    out = {header[i].lower(): sample_data[:, i] for i in range(len(header))}
+
+    for i in floats:
+        out[i] = map(float, out[i])
+
+    for i in ['x', 'y', 'z']:
+        out[i] *= np.power(np.ones(len(out['exponent']))*10, out['exponent'])
+        out[i] *= 1e-5 #volume normalization is 1/10ccm -> m^3
+
+    for i in range(len(out['mode'])):
+        if out['mode'][i].lower() == 'nrm':
+            out['mode'][i] = 0.0
+        if 'A' in out['mode'][i]:
+            out['mode'][i] = out['mode'][i][1:]
+        else:
+            out['mode'][i] = out['mode'][i]
+
+    try:
+        out['mode'] = np.array(map(np.float, out['mode']))
+    except:
+        pass
+    return out
 
 def cryo_nl(file, sample=None):
     log = logging.getLogger('RockPy.READIN.CRYO_NL')
