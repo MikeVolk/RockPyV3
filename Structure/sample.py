@@ -516,8 +516,7 @@ class Sample():
                                                      mtype=mtype, mfile=mfile, machine=machine,
                                                      mag_method=mag_method,
                                                      af_obj=af_obj, parm_obj=parm_obj,
-                                                     **options
-            )
+                                                     **options)
             self.measurements.append(measurement)
             return measurement
         else:

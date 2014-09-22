@@ -2,6 +2,7 @@ __author__ = 'mike'
 import numpy as np
 import copy
 import logging
+from scipy.interpolate import splrep, splev
 
 
 class tensor():
@@ -43,22 +44,36 @@ class data(object):
         self.variable = np.array(variable)
         # print np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
 
-        if len(measurement.T) >= 4:
+        # CHECK for 1D data ( size = the product of the array's dimensions would be equal to the len of the array,
+        # if not there must be more dimensions)
+        if measurement.size == len(variable):
+            self.log.debug(
+                'SIZE of << m >> is equal to length << %i, %i >> -> assuming 1D' % (measurement.size, len(measurement)))
+            self.dimension = 1
+            measurement = np.c_[measurement, measurement, measurement]
+        # CHECK for data with (x,y,z,m) m is recalculated
+        elif len(measurement.T) >= 4:
             # check for x,y,z,m data
             self.log.info('DIMENSION of << m >> is larger than 3(x,y,z) -> reducing to 3')
+            self.dimension = 3
             measurement = measurement[:, :3]
 
         self.log.debug('CREATING data structure: dimension << %s >>' % str(measurement.shape))
         self.measurement = np.c_[measurement, np.array([np.linalg.norm(i) for i in measurement])]
 
-        self.std_dev = std
-
         if time is None:
             try:
-                time = np.empty(len(self.variable))
+                time = np.zeros(len(self.variable))
             except:
                 time = None
 
+        if std is None:
+            try:
+                std = np.zeros(len(self.variable))
+            except:
+                std = None
+
+        self.std_dev = std
         self.time = time
 
     def __repr__(self):
@@ -68,35 +83,39 @@ class data(object):
 
     @property
     def x(self):
-        if self.measurement.shape[0] == self.measurement.size:
-            return self.measurement
+        if self.dimension == 1:
+            return self.measurement[:, 0]
         else:
             return self.measurement[:, 0]
 
     @property
     def y(self):
-        if self.measurement.shape[0] == self.measurement.size:
-            return self.measurement
+        if self.dimension == 1:
+            return self.measurement[:, 0]
         else:
             return self.measurement[:, 1]
 
     @property
     def z(self):
-        if self.measurement.shape[0] == self.measurement.size:
-            return self.measurement
+        if self.dimension == 1:
+            return self.measurement[:, 0]
         else:
             return self.measurement[:, 2]
 
     @property
     def m(self):
-        if self.measurement.shape[0] == self.measurement.size:
-            return self.measurement
+        if self.dimension == 1:
+            return self.measurement[:, 0]
         else:
             return self.measurement[:, 3]
 
     def recalc_m(self):
         self.log.info('RECALCULATING << m >> data')
         self.measurement[:, 3] = np.array([np.linalg.norm(i) for i in self.measurement[:, :3]])
+
+    @property
+    def data(self):
+        return self.measurement
 
     @property
     def d(self):
@@ -114,6 +133,16 @@ class data(object):
             return out
 
     @property
+    def var(self):
+        return self.variable
+
+    @property
+    def log10_var(self):
+        self_copy = self.self_copy
+        self_copy.variable = np.log10(self.variable)
+        return self_copy
+
+    @property
     def i(self):
         if self.measurement.shape[0] == self.measurement.size:
             self.log.error('DATA is only 1d, << inc >> can not be calculated')
@@ -124,7 +153,7 @@ class data(object):
 
     @property
     def len(self):
-        return len(self.measurement)
+        return len(self.variable)
 
     @property
     def dim(self):
@@ -134,7 +163,7 @@ class data(object):
 
     def max(self, component='m'):
         out = getattr(self, component, None)
-        if out:
+        if out is not None:
             out = np.fabs(out)
             out = np.max(out)
             return out
@@ -165,6 +194,39 @@ class data(object):
         self_copy.recalc_m()
         return self_copy
 
+
+    def interpolate(self, derivative=0, log = False):  # todo derivative
+        '''
+        derivative not yet implemented
+
+        :param derivative:
+        :return:
+        '''
+        self_copy = self.self_copy
+
+        if log:
+            self_copy.variable = np.linspace(min(np.log10(self.self_copy.variable)),
+                                             max(np.log10(self.self_copy.variable)), 100)
+            self_copy.variable = np.array([10**i for i in self_copy.variable])
+        else:
+            self_copy.variable = np.linspace(min(self.self_copy.variable), max(self.self_copy.variable), 500)
+
+        if self_copy.dimension == 1:
+            y = self_copy.m
+            fc = splrep(self.self_copy.variable, y, s=0)
+            y_new = splev(self_copy.variable, fc, der=derivative)
+            self_copy.measurement = np.c_[y_new, y_new, y_new, y_new]
+        else:
+            data = []
+            for i in ['x', 'y', 'z']:
+                y = getattr(self_copy, i)
+                fc = splrep(self.self_copy.variable, y, s=0)
+                aux = splev(self_copy.variable, fc, der=derivative)
+                data.append(aux)
+            self_copy.measurement = np.array(data)
+            self_copy.recalc_m()
+
+        return self_copy
 
     # ## calculations
     def __sub__(self, other):  #
@@ -246,7 +308,7 @@ class data(object):
         returns data object that has only the same variables as the other data_obj
         '''
 
-        #todo interpolation of data
+        # todo interpolation of data
         self_copy = self.__class__(copy.deepcopy(self.variable),
                                    copy.deepcopy(self.measurement),
                                    copy.deepcopy(self.time))
@@ -301,11 +363,13 @@ class data(object):
     @property
     def self_copy(self):
         self_copy = self.__class__(copy.deepcopy(self.variable),
-                           copy.deepcopy(self.measurement[:,:3]),
-                           copy.deepcopy(self.time))
+                                   copy.deepcopy(self.measurement[:, :3]),
+                                   copy.deepcopy(self.time))
+        self_copy.dimension = self.dimension
+
         return self_copy
 
-    def normalize(self, value = 1):
+    def normalize(self, value=1):
         out = self / value
         out.recalc_m()
         return out

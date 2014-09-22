@@ -409,26 +409,50 @@ class PARM_spectra(Plot):
 
 
 class IRM(Plot):
+
+    def __init__(self, sample_list, norm='mass', log=None,
+                 plot='show', folder=None, name='IRM-acquisition',
+                 plt_opt={}, **options):
+
+        if not log:
+            log = 'RockPy.PLOTTING.parm-spectra'
+
+        super(IRM, self).__init__(sample_list=sample_list,
+                                           norm=norm, log=log,
+                                           plot=plot, folder=folder, name=name,
+                                           **options)
+
+        self.x_label = 'field [T]'
+        self.y_label = 'moment'
+
+        self.show()
+        self.out()
+
     def show(self):
-        for sample in self.samples:
-            for measurement in sample.find_measurement('irm'):
-                label = sample.name
+        for sample_obj in self.sample_list:
+            for measurement in sample_obj.find_measurement('irm'):
+                if len(self.sample_list)>1:
+                    label = sample_obj.name
+                else:
+                    label = ''
+
                 if measurement.treatment:
                     label += '\t' + measurement.treatment.get_label()
-                factor = {'mass': measurement.sample.mass_kg,
-                          'max': max(measurement.up_field[:, 1]),
+                factor = {'mass': measurement.sample_obj.mass_kg,
+                          'max': max(measurement.rem),
                           None: 1}
                 norm_factor = factor[self.norm]
                 self.log.info('NORMALIZING\t by: %s %s' % (self.norm, str(norm_factor)))
-                self.log.info('PLOT\t of: %s' % sample.name)
+                self.log.info('PLOT\t of: %s' % sample_obj.name)
 
-                std, = self.ax.plot(measurement.up_field[:, 0], measurement.up_field[:, 1] / norm_factor, label=label)
-                self.ax.plot(measurement.down_field[:, 0], measurement.down_field[:, 1] / norm_factor,
-                             color=std.get_color())
+                std, = self.ax.plot(measurement.remanence.variable, measurement.remanence.m / norm_factor, label=label+' rem')
+                self.ax.plot(measurement.fields, measurement.direct_moment.m / norm_factor, label=label +' induced')
+                # data = measurement.direct_moment / measurement.remanence
+
+                # self.ax.plot(data.log_10_var.variable, data.log_10_var.m, label=label +' induced/rem ratio')
 
                 handles, labels = self.ax.get_legend_handles_labels()
                 self.ax.legend(handles, labels, prop={'size': 8})
-        plt.show()
 
 
 class Hysteresis(Plot):

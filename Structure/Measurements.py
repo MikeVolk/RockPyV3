@@ -14,12 +14,13 @@ import logging
 import numpy as np
 import scipy as sp
 from scipy.interpolate import interp1d, splrep
-from scipy.interpolate import UnivariateSpline
+import scipy as sp
 from scipy import stats, interpolate
 import matplotlib.pyplot as plt
 import csv
 from matplotlib.mlab import griddata
 import multiprocessing
+from lmfit import Parameters, minimize, printfuncs, report_fit
 
 # data [variable, x,y,z,m, (time)] - no dataclass
 class Measurement(object):
@@ -174,28 +175,33 @@ class Measurement(object):
         :return:
         """
         self.log.info('INTERPOLATIN << %s >> using splev (Scipy)' % what)
-        xy = np.sort(getattr(self, what), axis=0)
-        mtype = getattr(self, 'mtype')
+        xy = getattr(self, what)
 
-        if mtype == 'coe':
-            xy = np.array([[-i[0], i[1]] for i in xy])
-            xy = xy[::-1]
-        x = xy[:, 0]
-        y = xy[:, 1]
+        if isinstance(xy, RockPyV3.Structure.data.data):
+            out = xy.interpolate()
+        else:
+            xy = np.sort(xy, axis=0)
+            mtype = getattr(self, 'mtype')
 
-        if x_new is None:
-            x_new = np.linspace(min(x), max(x), 5000)
+            if mtype == 'coe':
+                xy = np.array([[-i[0], i[1]] for i in xy])
+                xy = xy[::-1]
+            x = xy[:, 0]
+            y = xy[:, 1]
 
-        fc = splrep(x, y, s=0)
-        y_new = interpolate.splev(x_new, fc, der=derivative)
+            if x_new is None:
+                x_new = np.linspace(min(x), max(x), 5000)
 
-        out = np.array([[x_new[i], y_new[i]] for i in range(len(x_new))])
+            fc = splrep(x, y, s=0)
+            y_new = interpolate.splev(x_new, fc, der=derivative)
 
-        if mtype == 'coe':
-            out = np.array([[-i[0], i[1]] for i in out])
-        self.log.debug('INTERPOLATION READY')
-        if derivative > 0:
-            self.log.info('RETURNING derivative << %i >>' % derivative)
+            out = np.array([[x_new[i], y_new[i]] for i in range(len(x_new))])
+
+            if mtype == 'coe':
+                out = np.array([[-i[0], i[1]] for i in out])
+            self.log.debug('INTERPOLATION READY')
+            if derivative > 0:
+                self.log.info('RETURNING derivative << %i >>' % derivative)
         return out
 
 
@@ -544,20 +550,31 @@ class Irm(Measurement):
         self.fields = self.raw_data[1][0][:, 0]
         self.log10_fields = np.log10(self.fields)
         self.rem = self.raw_data[1][0][:, 1]
-        self.dmom = self.raw_data[1][0][:, 2]
+        self.induced = self.raw_data[1][0][:, 2]
 
-        self.remanence = np.column_stack((self.fields, self.rem))
-        self.direct_moment = np.column_stack((self.fields, self.dmom))
+        # self.remanence = np.column_stack((self.fields, self.rem))
+        # self.direct_moment = np.column_stack((self.fields, self.induced))
+        self.remanence = data(variable = self.fields, measurement=self.rem)
+        self.direct_moment = data(variable = self.fields, measurement=self.induced)
+
+        ### initialize
+        # IRM unmixing
+        self.diff_remanence = None
+        self.interp_remanence = None
+
+    @property
+    def log10_data(self):
+        return self.remanence.log10_var
 
     @property
     def data(self):
         out = np.c_[self.fields, self.rem]
         return out
 
-    @property
-    def log10_data(self):
-        out = np.c_[self.log10_fields, self.rem]
-        return out
+    # @property
+    # def log10_data(self):
+    #     out = np.c_[self.log10_fields, self.rem]
+    #     return out
 
     @property
     def ms(self):
@@ -571,15 +588,14 @@ class Irm(Measurement):
         plt.ylabel('Moment')
         plt.show()
 
-    def plt_irm_unmixing(self, **options):
+    def calculate_irm_unmixing(self, **options):
         '''
-        Simple plotting function for IRM unmixing
 
         Robertson & France (1994) showed that the individual magnetic mineral phases contributing to a
         bulk IRM curve would each have an acquisition path approximating to a lognormal function, described
         using three parameters:
 
-        B1/2: the applied field at which the mineral phase would acquire half of its saturation IRM (SIRM),
+        B05: the applied field at which the mineral phase would acquire half of its saturation IRM (SIRM),
               providing a measure of the mean coercivity of that population.
         Mri:  the magnitude of the phase distribution, providing an indication of the component SIRM and therefore
               its contribution to the bulk IRM curve.
@@ -591,9 +607,37 @@ class Irm(Measurement):
 
         :math:
 
-           IRM(B) = \frac{M_{ri}}{DP(2\pi)^{1/2}} \int_{-\infty}^{+\infty} \exp \left[ \frac{\log B - \log B_{1/2})^2}{2 DP^2}\right] d \log B
+           IRM(B) = \frac{M_{ri}}{DP(2\pi)^{1/2}} \int_{-\infty}^{+\infty} \exp \left[ \frac{\log B -
+                    \log B_{1/2})^2}{2 DP^2}\right] d \log B
 
         '''
+
+        # ## checking for options ###
+        norm = options.get('norm', False)
+        # interpolate_first = options.get('interpolate_first', True)
+        s_reached_saturation = options.get('saturated', True)
+        max_components = options.get('components', 3)
+
+        self.log.info('CALCULATING IRM unimixing assuming sample is in saturation << %s >>' % s_reached_saturation)
+
+        self.interp_remanence = self.remanence.interpolate(log=True)
+        # self.diff_remanence = self.interp_remanence.derivative()
+        self.diff_remanence = self.remanence.interpolate(derivative=1)
+
+        # def func_gauss(params, x):
+        #     A = params['B05'].value
+        #     mu = params['Mri'].value
+        #     sigma = params['DP'].value
+        #
+        #     sqrt2 = np.sqrt(2*np.pi)
+        #     pdf = (1 / (x * sigma * sqrt2) * np.exp(-(np.log(x), )**2)
+        #     cdf = B * G * ( np.sqrt(pi) / 2 ) * ( sp.special.erf((x - E) / G) - sp.special.erf(-E / G) )
+        #
+        #     return data - model
+
+
+    def plt_irm_unmixing(self, **options):
+
 
         # ## checking for options ###
         norm = options.get('norm', False)
@@ -602,39 +646,55 @@ class Irm(Measurement):
 
         self.log.info('CALCULATING IRM unimixing assuming sample is in saturation << %s >>' % s_reached_saturation)
 
-        diff_data = self.calculate_derivative(what='log10_data', interpolate_first=interpolate_first,
-                                              **options)
 
-        interp = self.interpolate('log10_data')
+        if not self.diff_remanence or not self.interp_remanence:
+            self.calculate_irm_unmixing()
+
 
         plt.title('IRM acquisition of %s' % self.sample_obj.name)
 
         if norm:
-            norm_factor = self.rem.max()
+            norm_factor = self.remanence.max
         else:
             norm_factor = 1
 
-        std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',  # std for copying color to interpolated data
-                        label='data',
-        )
-        plt.plot(interp[:, 0], interp[:, 1] / norm_factor, '--',
-                 color=std.get_color(),
-                 label='interpolated',
-        )
 
-        diff_label = '1st derivative'
-        if interpolate_first:
-            diff_label += ' interpolated'
-        plt.plot(diff_data[:, 0], diff_data[:, 1],
-                 label=diff_label)
+        std, = plt.plot(self.remanence.variable,
+                 self.remanence.m/ self.remanence.max(),
+                 '.',
+                 )
+        plt.plot(self.interp_remanence.variable,
+                 self.interp_remanence.m / self.interp_remanence.max(),
+                 '--',
+                 color = std.get_color(),
+                 )
+        plt.plot(self.diff_remanence.variable,
+                 self.diff_remanence.m/ self.diff_remanence.max(),
+                 '.',
+                 )
 
-        plt.xlabel('$\\log_{10}$(Field) [T]')
-        plt.ylabel('Moment')
-
-        if norm:
-            plt.ylim([0, max(self.rem / norm_factor)])
-
-        plt.legend(loc='best')
+        plt.xscale('log')
+        # std, = plt.plot(self.log10_fields, self.rem / norm_factor, '.-',  # std for copying color to interpolated data
+        #                 label='data',
+        # )
+        # plt.plot(log_10_interp_data.variable, log_10_interp_data.m / norm_factor, '--',
+        #          color=std.get_color(),
+        #          label='interpolated',
+        # )
+        #
+        # diff_label = '1st derivative'
+        # if interpolate_first:
+        #     diff_label += ' interpolated'
+        # plt.plot(log_10_diff_data[:, 0], log_10_diff_data[:, 1],
+        #          label=diff_label)
+        #
+        # plt.xlabel('$\\log_{10}$(Field) [T]')
+        # plt.ylabel('Moment')
+        #
+        # if norm:
+        #     plt.ylim([0, max(self.rem / norm_factor)])
+        #
+        # plt.legend(loc='best')
         plt.show()
 
 
@@ -1125,9 +1185,9 @@ class Hysteresis(Measurement):
 
 
 class Viscosity(Measurement):
-    def __init__(self, sample_obj, mtype, mfile, machine, mag_method):
-        self.log = logging.getLogger('RockPy.MEASUREMENT.visc')
-        Measurement.__init__(self, sample_obj, mtype, mfile, machine, self.log)
+    def __init__(self, sample_obj, mtype, mfile, machine, mag_method, **options):
+        log = 'RockPy.MEASUREMENT.visc'
+        Measurement.__init__(self, sample_obj, mtype, mfile, machine, log)
 
         if machine.lower() == 'vsm':
             self.info = self.raw_data[-1]
@@ -1183,13 +1243,13 @@ class Viscosity(Measurement):
         ax.set_ylim([min(self.moments) / norm_factor, max(self.moments) / norm_factor])
         ax.set_xlim([min(self.log_times), max(self.log_times)])
 
-        viscotity.plot_log_visc(visc_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
-        viscotity.plot_visc(visc_obj=self, ax=ax2, norm_factor=norm_factor, out='rtn', folder=folder, name=name,
+        viscosity.plot_log_visc(visc_obj=self, ax=ax, norm_factor=norm_factor, out='rtn', folder=folder, name=name)
+        viscosity.plot_visc(visc_obj=self, ax=ax2, norm_factor=norm_factor, out='rtn', folder=folder, name=name,
                             plt_opt={'color': 'k', 'linestyle': '--', 'marker': ''},
         )
-        viscotity.add_formula_text(self, ax=ax)
-        viscotity.add_label(self, ax, log=True)
-        viscotity.add_label(self, ax2, log=False)
+        viscosity.add_formula_text(self, ax=ax)
+        viscosity.add_label(self, ax, log=True)
+        viscosity.add_label(self, ax2, log=False)
 
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
@@ -2437,6 +2497,8 @@ class Forc(Measurement):
 
         self.temperature = self.raw_data.get('Temperature (K)', None)
 
+        self.h_sat = float(self.raw_data['SCRIPT'].get('HSat', None))
+
         if self.temperature is None:
             self.temperature = [np.ones(len(i)) * 295 for i in
                                 self.moment]  # generates temp = 295C data if temp data not in data file
@@ -2623,9 +2685,10 @@ class Forc(Measurement):
 
     def plt_ha_hb_space(self):
 
-        plt.contourf(self.xi, self.yi, self.zi, 30, cmap=plt.cm.get_cmap("jet"))
+        plt.grid()
 
         # plt.imshow( zi, origin='lower', extent=(minHb, maxHb, minHa, maxHa), cmap='jet')
+        plt.contourf(self.xi, self.yi, self.zi, 30, cmap=plt.cm.get_cmap("jet"),zorder=100)
         plt.colorbar()  # draw colorbar
         plt.xlabel('Hb')
         plt.ylabel('Ha')
@@ -2654,12 +2717,18 @@ class Forc(Measurement):
         plots the saturating field and standard deviation
 
         """
-        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0], '.')
-        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0], '-', color='r', alpha=0.4)
-        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0] - self.drift_std[0], '-', color='r', alpha=0.4)
-        plt.fill_between(range(len(self.drift[:, 0])), self.drift[:, 0] + self.drift_std[0],
-                         self.drift[:, 0] - self.drift_std[0],
+
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0]/self.h_sat * 100, '.')
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0]/self.h_sat * 100 + self.drift_std[0]/self.h_sat * 100, '-', color='r', alpha=0.4)
+        plt.plot(range(len(self.drift[:, 0])), self.drift[:, 0]/self.h_sat * 100 - self.drift_std[0]/self.h_sat * 100, '-', color='r', alpha=0.4)
+        plt.fill_between(range(len(self.drift[:, 0])),
+                         self.drift[:, 0]/self.h_sat * 100 + self.drift_std[0]/self.h_sat * 100,
+                         self.drift[:, 0]/self.h_sat * 100 - self.drift_std[0]/self.h_sat * 100,
                          color='r', alpha=0.2)
+        plt.title('Drift of field at $H_{sat}$')
+        plt.xlabel('calibration measurement number')
+        plt.ylabel('deviation of set $H_{sat}$')
+        plt.ticklabel_format(axis='y', offset=None)
         plt.show()
 
     def plt_drift_moment_sat(self):
@@ -2674,6 +2743,7 @@ class Forc(Measurement):
         plt.fill_between(range(len(data)), data + self.drift_std[1] / max(self.drift[:, 1]),
                          data - self.drift_std[1] / max(self.drift[:, 1]),
                          color='r', alpha=0.2)
+        plt.title('Drift of moment at $H_{sat}$')
         plt.xlim(0, len(data))
         plt.xlabel('calibration measurement number')
         plt.ylabel('moment calibration value')
@@ -2681,8 +2751,8 @@ class Forc(Measurement):
 
     def plt_forc(self, SF=3):
 
-        if self.fitted_forc_data is None:
-            self.log.warning('NO fitted data found, fitting data with smoothing factor << 3 >>')
+        if self.fitted_forc_data is None or SF != self.SF:
+            self.log.warning('NO fitted data found, fitting data with smoothing factor << %i >>' %self.SF)
             self.calculate_forc(SF=SF)
 
         # plot FORC diagram in Ha, Hb
